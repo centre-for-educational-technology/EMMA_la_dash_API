@@ -16,6 +16,23 @@ class EmmaDashboardMongoDb {
     ));
   }
 
+  /**
+   * Extracts values from an array and returns the first one.
+   * Mainly used to extract names/titles, ignoring language settings.
+   * @param array $array An array to extract the value from
+   * @return mixed Extracted first value
+   */
+  public static function getFirstValueFromArray($array) {
+    $values = array_values($array);
+
+    return $values[0];
+  }
+
+  /**
+   * Fetch dat from database using find()
+   * @param  array $query Query to run
+   * @return MongoCollection Collection of ruturned documents
+   */
   public function fetchData ($query) {
     $query['lrs._id'] = $this->lrsId;
 

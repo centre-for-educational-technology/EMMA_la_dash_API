@@ -189,7 +189,7 @@ $klein->respond('/course/[i:id]/activity_stream', function ($request, $response,
       $dates_activities[$timestamp_date]['activities'][] = array(
         'name' => $document['statement']['actor']['name'],
         'type' => 'join',
-        'title' => array_values($document['statement']['object']['definition']['name'])[0],
+        'title' => $app->learningLockerDb->getFirstValueFromArray($document['statement']['object']['definition']['name']),
         'url' => $document['statement']['object']['id'],
         'time' => $timestamp_time,
       );
@@ -197,7 +197,7 @@ $klein->respond('/course/[i:id]/activity_stream', function ($request, $response,
       $dates_activities[$timestamp_date]['activities'][] = array(
         'name' => $document['statement']['actor']['name'],
         'type' => 'leave',
-        'title' => array_values($document['statement']['object']['definition']['name'])[0],
+        'title' => $app->learningLockerDb->getFirstValueFromArray($document['statement']['object']['definition']['name']),
         'url' => $document['statement']['object']['id'],
         'time' => $timestamp_time,
       );
@@ -205,7 +205,7 @@ $klein->respond('/course/[i:id]/activity_stream', function ($request, $response,
       $dates_activities[$timestamp_date]['activities'][] = array(
         'name' => $document['statement']['actor']['name'],
         'type' => 'visited',
-        'title' => array_values($document['statement']['object']['definition']['name'])[0],
+        'title' => $app->learningLockerDb->getFirstValueFromArray($document['statement']['object']['definition']['name']),
         'url' => $document['statement']['object']['id'],
         'time' => $timestamp_time,
       );
@@ -213,7 +213,7 @@ $klein->respond('/course/[i:id]/activity_stream', function ($request, $response,
       $dates_activities[$timestamp_date]['activities'][] = array(
         'name' => $document['statement']['actor']['name'],
         'type' => 'answered',
-        'title' => array_values($document['statement']['object']['definition']['name'])[0],
+        'title' => $app->learningLockerDb->getFirstValueFromArray($document['statement']['object']['definition']['name']),
         'url' => $document['statement']['object']['id'],
         'time' => $timestamp_time,
       );
@@ -221,7 +221,7 @@ $klein->respond('/course/[i:id]/activity_stream', function ($request, $response,
       $dates_activities[$timestamp_date]['activities'][] = array(
         'name' => $document['statement']['actor']['name'],
         'type' => 'responded',
-        'title' => array_values($document['statement']['object']['definition']['name'])[0],
+        'title' => $app->learningLockerDb->getFirstValueFromArray($document['statement']['object']['definition']['name']),
         'url' => $document['statement']['object']['id'],
         'time' => $timestamp_time,
       );
@@ -230,7 +230,7 @@ $klein->respond('/course/[i:id]/activity_stream', function ($request, $response,
       $dates_activities[$timestamp_date]['activities'][] = array(
         'name' => $document['statement']['actor']['name'],
         'type' => 'comment',
-        'title' => array_values($document['statement']['object']['definition']['name'])[0],
+        'title' => $app->learningLockerDb->getFirstValueFromArray($document['statement']['object']['definition']['name']),
         'url' => $document['statement']['object']['id'],
         'time' => $timestamp_time,
       );
@@ -358,7 +358,7 @@ $klein->respond('/course/[i:id]/overview', function ($request, $response, $servi
     foreach($popular_aggregate['result'] as $resource) {
       $resources[] = array(
         'url' => $resource['_id'],
-        'title' => array_values($resource['name'])[0],
+        'title' => $app->learningLockerDb->getFirstValueFromArray($resource['name']),
         'views' => $resource['count'],
       );
     }
