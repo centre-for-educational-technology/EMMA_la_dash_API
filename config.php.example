@@ -1,0 +1,14 @@
+<?php
+
+DEFINE('EDB_APP_PATH', '/'); // Path in case of being served from subdirectory, should correspond with RewriteBase
+
+DEFINE('EDB_MDB_HOST', ''); // MongoDB host
+DEFINE('EDB_MDB_PORT', ''); // MongoDB port
+DEFINE('EDB_MDB_USERNAME', ''); // MongoDB username
+DEFINE('EDB_MDB_PASSWORD', ''); // MongoDB password
+DEFINE('EDB_MDB_DATABASE', ''); // MongoDB database
+DEFINE('EDB_LRS_ID', ''); // MongoDB LRS ID (used to only consider statements from that LRS)
+
+DEFINE('EDB_PLATFORM_URL', ''); // Platform setup URL, should have slash in the end
+DEFINE('EDB_SERVICE_USERNAME', ''); // Username for Web Service Basic Auth
+DEFINE('EDB_SERVICE_PASSWORD', ''); // Password for Web Service Basic Auth
