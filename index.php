@@ -19,7 +19,15 @@ if ( EDB_APP_PATH !== '/' ) {
 }
 
 // Instanciate connections and helpers
-$klein->respond(function ($request, $response, $service, $app) {
+$klein->respond(function ($request, $response, $service, $app) use ($klein){
+  $klein->onError(function($klein, $error_msg) {
+    $klein->response()->code(500);
+    // XXX Exposing internal error information might be a bad idea
+    $klein->response()->json(array(
+      'message' => $error_msg,
+    ));
+  });
+
   $app->register('learningLockerDb', function () {
     return new EmmaDashboardMongoDb(
       EDB_MDB_HOST,
@@ -292,10 +300,10 @@ $klein->respond('/course/[i:id]/overview', function ($request, $response, $servi
             '$sum' => 1,
           ),
           'times' => array(
-            '$addToSet' => '$statement.object.definition.extensions.http://id&46;tincanapi&46;com/extension/duration',
+            '$push' => '$statement.object.definition.extensions.http://id&46;tincanapi&46;com/extension/duration',
           ),
           'idleTimes' => array(
-            '$addToSet' => '$statement.object.definition.extensions.http://id&46;tincanapi&46;com/extension/idleDuration',
+            '$push' => '$statement.object.definition.extensions.http://id&46;tincanapi&46;com/extension/idleDuration',
           ),
           /*'totalDuration' => array(
             '$sum' => '$statement.object.definition.extensions.http://id&46;tincanapi&46;com/extension/duration'

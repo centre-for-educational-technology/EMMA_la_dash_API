@@ -9,11 +9,16 @@ class EmmaDashboardMongoDb {
     $this->password = $password;
     $this->lrsId = $lrsId;
 
-    $this->connection = new MongoClient('mongodb://' . $this->host . ':' . $this->port, array(
-      'username' => $this->username,
-      'password' => $this->password,
-      'db' => $this->database
-    ));
+    try {
+      $this->connection = new MongoClient('mongodb://' . $this->host . ':' . $this->port, array(
+        'username' => $this->username,
+        'password' => $this->password,
+        'db' => $this->database
+      ));
+    } catch (Exception $e) {
+      error_log('Database Error: ' . $e->getMessage());
+      throw new Exception('Database Error, please contact Administrator.');
+    }
   }
 
   /**
