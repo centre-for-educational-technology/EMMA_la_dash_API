@@ -385,4 +385,37 @@ $klein->respond('/course/[i:id]/overview', function ($request, $response, $servi
   ));
 });
 
+$klein->respond('/course/[i:id]/lessons', function ($request, $response, $service, $app) {
+  $course_id = $request->param('id');
+
+  $structure_response = $app->serviceCaller->getCourseStructure($course_id);
+  $structure = json_decode($structure_response);
+
+  $lessons_with_units = array();
+
+  if ( isset($structure->lessons) ) {
+    foreach( $structure->lessons as $lesson ) {
+      $lessons_with_units[$lesson->id] = array(
+        'id' => $lesson->id,
+        'title' => $lesson->title,
+        'units' => array(),
+      );
+      if ( isset($lesson->units) ) {
+        foreach ( $lesson->units as $unit ) {
+          $lessons_with_units[$lesson->id]['units'][] = array(
+            'id' => $unit->id,
+            'title' => $unit->title,
+          );
+        }
+      }
+    }
+  }
+
+  $response->json(array(
+    'id' => $course_id,
+    'title' => $structure->title,
+    'lessons_with_units' => array_values($lessons_with_units),
+  ));
+});
+
 $klein->dispatch($request);
