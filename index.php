@@ -49,13 +49,16 @@ $klein->respond(function ($request, $response, $service, $app) use ($klein){
   });
 });
 
-// XXX Make it configurable
 // Handle CORS filter
-$klein->respond(function ($request, $response) {
-  $response->header('Access-Control-Allow-Origin', '*');
-  $response->header('Access-Control-Allow-Methods', 'GET', 'OPTIONS');
-});
-
+if ( EDB_ENABLE_CORS ) {
+  /**
+   * Add CORS filter which allows any origin
+   */
+  $klein->respond(function ($request, $response) {
+    $response->header('Access-Control-Allow-Origin', '*');
+    $response->header('Access-Control-Allow-Methods', 'GET', 'OPTIONS');
+  });
+}
 
 $klein->respond('/course/[i:id]/participants', function ($request, $response, $service, $app) {
   $course_id = $request->param('id');

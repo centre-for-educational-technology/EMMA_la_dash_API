@@ -2,6 +2,8 @@
 
 DEFINE('EDB_APP_PATH', '/'); // Path in case of being served from subdirectory, should correspond with RewriteBase
 
+DEFINE('EDB_ENABLE_CORS', false);
+
 DEFINE('EDB_MDB_HOST', ''); // MongoDB host
 DEFINE('EDB_MDB_PORT', ''); // MongoDB port
 DEFINE('EDB_MDB_USERNAME', ''); // MongoDB username
