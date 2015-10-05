@@ -19,7 +19,8 @@ if ( EDB_APP_PATH !== '/' ) {
 }
 
 // Instanciate connections and helpers
-$klein->respond(function ($request, $response, $service, $app) use ($klein){
+$klein->respond(function ($request, $response, $service, $app) use ($klein) {
+  // Error handler
   $klein->onError(function($klein, $error_msg) {
     $klein->response()->code(500);
     // XXX Exposing internal error information might be a bad idea
@@ -175,9 +176,6 @@ $klein->respond('/course/[i:id]/activity_stream', function ($request, $response,
       ),
     ),
   );
-  // XXX Looks like there is also
-  // [id] => http://activitystrea.ms/schema/1.0/comment
-  // [type] => http://adlnet.gov/expapi/activities/blog
 
   $cursor = $app->learningLockerDb->fetchData($query);
   $cursor->sort(array(
@@ -345,7 +343,7 @@ $klein->respond('/course/[i:id]/overview', function ($request, $response, $servi
       '$group' => array(
         '_id' => '$statement.object.id',
         'name' => array(
-          '$first' => '$statement.object.definition.name',
+          '$first' => '$statement.object.definition.name', // TODO Check if taking last also is possible
         ),
         'count' => array(
           '$sum' => 1,

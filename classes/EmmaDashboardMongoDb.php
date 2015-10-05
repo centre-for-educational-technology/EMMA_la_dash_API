@@ -1,5 +1,8 @@
 <?php
 
+class EmmaDashboardMongoDbException extends Exception {
+}
+
 class EmmaDashboardMongoDb {
   public function __construct ($host, $port, $database, $username, $password, $lrsId) {
     $this->host = $host;
@@ -17,7 +20,7 @@ class EmmaDashboardMongoDb {
       ));
     } catch (Exception $e) {
       error_log('Database Error: ' . $e->getMessage());
-      throw new Exception('Database Error, please contact Administrator.');
+      throw new EmmaDashboardMongoDbException('Database Error, please contact Administrator.');
     }
   }
 

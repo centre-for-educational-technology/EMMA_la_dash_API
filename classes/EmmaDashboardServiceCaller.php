@@ -1,5 +1,8 @@
 <?php
 
+class EmmaDashboardServiceException extends Exception {
+}
+
 class EmmaDashboardServiceCaller {
   public function __construct ($baseUrl, $username, $password) {
     $this->base = $baseUrl;
@@ -12,7 +15,7 @@ class EmmaDashboardServiceCaller {
 
     if ( isset($decoded->error) ) {
       error_log('Web Service Responded With Error: ' . $decoded->error->message . ' : ' . $decoded->error->code);
-      throw new Exception('Service Error, please contact Administrator.');
+      throw new EmmaDashboardServiceException('Service Error, please contact Administrator.');
     }
   }
 
@@ -37,7 +40,7 @@ class EmmaDashboardServiceCaller {
 
     if ( curl_errno($curl) ) {
       error_log('Web Service Error: ' . curl_error($curl));
-      throw new Exception('Service Error, please contact Administrator.');
+      throw new EmmaDashboardServiceException('Service Error, please contact Administrator.');
     }
 
     curl_close($curl);
