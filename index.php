@@ -243,8 +243,15 @@ $klein->respond('/course/[i:id]/activity_stream', function ($request, $response,
         'time' => $timestamp_time,
       );
     } else {
-      // XXX This should not be possible
+      // This should not be possible, but will be kept just in case
       error_log(print_r($document, true));
+      $dates_activities[$timestamp_date]['activities'][] = array(
+        'name' => $document['statement']['actor']['name'],
+        'type' => 'UNKNOWN ACTIVITY TYPE',
+        'title' => $app->learningLockerDb->getFirstValueFromArray($document['statement']['object']['definition']['name']),
+        'url' => $document['statement']['object']['id'],
+        'time' => $timestamp_time,
+      );
     }
   }
 
@@ -412,6 +419,197 @@ $klein->respond('/course/[i:id]/lessons', function ($request, $response, $servic
     'id' => $course_id,
     'title' => $structure->title,
     'lessons_with_units' => array_values($lessons_with_units),
+  ));
+});
+
+$klein->respond('/course/[i:course]/lesson/[i:lesson]/unit/[i:unit]', function ($request, $response, $service, $app) {
+  $course_id = $request->param('course');
+  $lesson_id = $request->param('lesson');
+  $unit_id = $request->param('unit');
+
+  $students_response = $app->serviceCaller->getCourseStudents($course_id);
+  $students = json_decode($students_response);
+  $students_count = count($students);
+
+  $structure_response = $app->serviceCaller->getCourseStructure($course_id);
+  $structure = json_decode($structure_response);
+
+  $assignmments_uris = array();
+
+  $current_lesson = $app->serviceCaller->extractLessonFromCourse($lesson_id, $structure);
+  $current_unit = $app->serviceCaller->extractUnitFromLesson($unit_id, $current_lesson);
+
+  foreach ( $current_unit->assignments as $assignment ) {
+    $assignmments_uris[] = $app->uriBuilder->buildAssignmentUri($assignment->id);
+  }
+
+  $query = array(
+    'statement.verb.id' => $app->xapiHelpers->getVisitedUri(),
+    'statement.object.id' => array(
+      '$in' => array(
+        $app->uriBuilder->buildUnitUri($unit_id),
+      ),
+    ),
+    'statement.actor.mbox' => array(
+      '$in' => array_map(function ($email) { return 'mailto:' . $email; }, $students),
+    ),
+  );
+
+  $pipeline = array(
+    array(
+      '$match' => $query,
+    ),
+    array(
+      '$group' => array(
+        '_id' => 'null',
+        'visitors' => array(
+          '$addToSet' => '$statement.actor.mbox',
+        ),
+      ),
+    ),
+  );
+
+  $aggregate = $app->learningLockerDb->fetchAggregate($pipeline);
+
+  $query_materials = array(
+    'statement.verb.id' => $app->xapiHelpers->getVisitedUri(),
+    'statement.context.contextActivities.grouping' => array(
+      '$elemMatch' => array(
+        'id' => $app->uriBuilder->buildUnitUri($unit_id), // TODO Include assignments
+      ),
+    ),
+    'object.definition.type' => array(
+      '$ne' => $app->xapiHelpers->getLinkTypeUri(),
+    ),
+    'statement.actor.mbox' => array(
+      '$in' => array_map(function ($email) { return 'mailto:' . $email; }, $students),
+    ),
+  );
+
+  $pipeline_materials = array(
+    array(
+      '$match' => $query_materials,
+    ),
+    array(
+      '$group' => array(
+        '_id' => 'null',
+        'visitors' => array(
+          '$addToSet' => '$statement.actor.mbox',
+        ),
+      ),
+    ),
+  );
+
+  $aggregate_materials = $app->learningLockerDb->fetchAggregate($pipeline_materials);
+
+  $query_links = array(
+    'statement.verb.id' => $app->xapiHelpers->getVisitedUri(),
+    'statement.context.contextActivities.grouping' => array(
+      '$elemMatch' => array(
+        'id' => $app->uriBuilder->buildUnitUri($unit_id), // TODO Include assignments
+      ),
+    ),
+    'object.definition.type' => $app->xapiHelpers->getLinkTypeUri(),
+    'statement.actor.mbox' => array(
+      '$in' => array_map(function ($email) { return 'mailto:' . $email; }, $students),
+    ),
+  );
+
+  $pipeline_links = array(
+    array(
+      '$match' => $query_links,
+    ),
+    array(
+      '$group' => array(
+        '_id' => 'null',
+        'visitors' => array(
+          '$addToSet' => '$statement.actor.mbox',
+        ),
+      ),
+    ),
+  );
+
+  $aggregate_links = $app->learningLockerDb->fetchAggregate($pipeline_links);
+
+  $query_assignments_v = array(
+    'statement.verb.id' => $app->xapiHelpers->getVisitedUri(),
+    'statement.object.id' => array(
+      '$in' => $assignmments_uris,
+    ),
+    'statement.actor.mbox' => array(
+      '$in' => array_map(function ($email) { return 'mailto:' . $email; }, $students),
+    ),
+  );
+
+  $pipeline_assignments_v = array(
+    array(
+      '$match' => $query_assignments_v,
+    ),
+    array(
+      '$group' => array(
+        '_id' => 'null',
+        'visitors' => array(
+          '$addToSet' => '$statement.actor.mbox',
+        ),
+      ),
+    ),
+  );
+
+  $aggregate_assignments_v = $app->learningLockerDb->fetchAggregate($pipeline_assignments_v);
+
+  $query_assignments_s = array(
+    'statement.verb.id' => $app->xapiHelpers->getAnsweredUri(),
+    'statement.object.id' => array(
+      '$in' => $assignmments_uris,
+    ),
+    'statement.actor.mbox' => array(
+      '$in' => array_map(function ($email) { return 'mailto:' . $email; }, $students),
+    ),
+  );
+
+  $pipeline_assignments_s = array(
+    array(
+      '$match' => $query_assignments_s,
+    ),
+    array(
+      '$group' => array(
+        '_id' => 'null',
+        'visitors' => array(
+          '$addToSet' => '$statement.actor.mbox',
+        ),
+        'averageScore' => array(
+          '$avg' => '$statement.result.score.scaled',
+        ),
+      ),
+    ),
+  );
+
+  $aggregate_assignments_s = $app->learningLockerDb->fetchAggregate($pipeline_assignments_s);
+
+  $response->json(array(
+    'course' => $course_id,
+    'lesson' => $lesson_id,
+    'unit' => $unit_id,
+    'students_count' => $students_count,
+    'assignments_count' => count($assignmments_uris),
+    'learning_content' => array(
+      'unit' => array(
+        'count' => isset($aggregate['result'][0]['visitors']) ? count($aggregate['result'][0]['visitors']) : 0,
+      ),
+      'materials' => array(
+        'count' => isset($aggregate_materials['result'][0]['visitors']) ? count($aggregate_materials['result'][0]['visitors']) : 0,
+      ),
+      'hyperlinks' => array(
+        'count' => isset($aggregate_links['result'][0]['visitors']) ? count($aggregate_links['result'][0]['visitors']) : 0,
+      ),
+      'viewed_assignments' => array(
+        'count' => isset($aggregate_assignments_v['result'][0]['visitors']) ? count($aggregate_assignments_v['result'][0]['visitors']) : 0,
+      ),
+      'submitted_assignments' => array(
+        'count' => isset($aggregate_assignments_s['result'][0]['visitors']) ? count($aggregate_assignments_s['result'][0]['visitors']) : 0,
+        'average_score' => isset($aggregate_assignments_s['result'][0]['averageScore']) ? count($aggregate_assignments_s['result'][0]['averageScore']) : 0,
+      )
+    ),
   ));
 });
 

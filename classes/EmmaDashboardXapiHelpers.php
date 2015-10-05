@@ -24,4 +24,8 @@ class EmmaDashboardXapiHelpers {
   public static function getRespondedUri () {
     return 'http://adlnet.gov/expapi/verbs/responded';
   }
+
+  public static function getLinkTypeUri () {
+    return 'http://adlnet.gov/expapi/activities/link';
+  }
 }

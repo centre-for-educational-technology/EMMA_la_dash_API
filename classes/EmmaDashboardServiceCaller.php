@@ -49,4 +49,20 @@ class EmmaDashboardServiceCaller {
 
     return $result;
   }
+
+  public static function extractLessonFromCourse($lesson_id, $course) {
+    $current_lesson = array_filter($course->lessons, function ($lesson) use ($lesson_id) {
+      return $lesson->id == $lesson_id;
+    });
+
+    return array_pop($current_lesson);
+  }
+
+  public static function extractUnitFromLesson($unit_id, $lesson) {
+    $current_unit = array_filter($lesson->units, function ($unit) use ($unit_id) {
+      return $unit->id == $unit_id;
+    });
+
+    return array_pop($current_unit);
+  }
 }
