@@ -197,7 +197,7 @@ $klein->respond('/course/[i:id]/activity_stream', function ($request, $response,
     if ( $document['statement']['verb']['id'] === $app->xapiHelpers->getJoinUri() ) {
       $dates_activities[$timestamp_date]['activities'][] = array(
         'name' => $document['statement']['actor']['name'],
-        'type' => 'join',
+        'type' => 'joined',
         'title' => $app->learningLockerDb->getFirstValueFromArray($document['statement']['object']['definition']['name']),
         'url' => $document['statement']['object']['id'],
         'time' => $timestamp_time,
@@ -205,7 +205,7 @@ $klein->respond('/course/[i:id]/activity_stream', function ($request, $response,
     } else if ( $document['statement']['verb']['id'] === $app->xapiHelpers->getLeaveUri() ) {
       $dates_activities[$timestamp_date]['activities'][] = array(
         'name' => $document['statement']['actor']['name'],
-        'type' => 'leave',
+        'type' => 'left',
         'title' => $app->learningLockerDb->getFirstValueFromArray($document['statement']['object']['definition']['name']),
         'url' => $document['statement']['object']['id'],
         'time' => $timestamp_time,
@@ -235,10 +235,9 @@ $klein->respond('/course/[i:id]/activity_stream', function ($request, $response,
         'time' => $timestamp_time,
       );
     } else if ( $document['statement']['verb']['id'] === $app->xapiHelpers->getCreateUri() ) {
-      error_log(print_r($document, true));
       $dates_activities[$timestamp_date]['activities'][] = array(
         'name' => $document['statement']['actor']['name'],
-        'type' => 'comment',
+        'type' => 'commented',
         'title' => $app->learningLockerDb->getFirstValueFromArray($document['statement']['object']['definition']['name']),
         'url' => $document['statement']['object']['id'],
         'time' => $timestamp_time,
