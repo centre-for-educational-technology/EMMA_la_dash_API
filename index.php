@@ -471,14 +471,19 @@ $klein->respond('/course/[i:course]/lesson/[i:lesson]/unit/[i:unit]', function (
 
   $aggregate = $app->learningLockerDb->fetchAggregate($pipeline);
 
+  $tmp_parent_uris = $assignmments_uris;
+  $tmp_parent_uris[] = $app->uriBuilder->buildUnitUri($unit_id);
+
   $query_materials = array(
     'statement.verb.id' => $app->xapiHelpers->getVisitedUri(),
-    'statement.context.contextActivities.grouping' => array(
+    'statement.context.contextActivities.parent' => array(
       '$elemMatch' => array(
-        'id' => $app->uriBuilder->buildUnitUri($unit_id), // TODO Include assignments
+        'id' => array(
+          '$in' => $tmp_parent_uris,
+        )
       ),
     ),
-    'object.definition.type' => array(
+    'statement.object.definition.type' => array(
       '$ne' => $app->xapiHelpers->getLinkTypeUri(),
     ),
     'statement.actor.mbox' => array(
@@ -502,14 +507,19 @@ $klein->respond('/course/[i:course]/lesson/[i:lesson]/unit/[i:unit]', function (
 
   $aggregate_materials = $app->learningLockerDb->fetchAggregate($pipeline_materials);
 
+  $tmp_parent_uris = $assignmments_uris;
+  $tmp_parent_uris[] = $app->uriBuilder->buildUnitUri($unit_id);
+
   $query_links = array(
     'statement.verb.id' => $app->xapiHelpers->getVisitedUri(),
-    'statement.context.contextActivities.grouping' => array(
+    'statement.context.contextActivities.parent' => array(
       '$elemMatch' => array(
-        'id' => $app->uriBuilder->buildUnitUri($unit_id), // TODO Include assignments
+        'id' => array(
+          '$in' => $tmp_parent_uris,
+        )
       ),
     ),
-    'object.definition.type' => $app->xapiHelpers->getLinkTypeUri(),
+    'statement.object.definition.type' => $app->xapiHelpers->getLinkTypeUri(),
     'statement.actor.mbox' => array(
       '$in' => array_map(function ($email) { return 'mailto:' . $email; }, $students),
     ),
@@ -574,9 +584,18 @@ $klein->respond('/course/[i:course]/lesson/[i:lesson]/unit/[i:unit]', function (
     array(
       '$group' => array(
         '_id' => 'null',
+        'count' => array(
+          '$sum' => 1,
+        ),
         'visitors' => array(
           '$addToSet' => '$statement.actor.mbox',
         ),
+        /*'scores' => array(
+          '$push' => '$statement.result.score.scaled', // XXX REMOVEME
+        ),*/
+        /*'sesses' => array(
+          '$push' => '$statement.result.success', // XXX REMOVEME
+        ),*/
         'averageScore' => array(
           '$avg' => '$statement.result.score.scaled',
         ),
@@ -585,6 +604,7 @@ $klein->respond('/course/[i:course]/lesson/[i:lesson]/unit/[i:unit]', function (
   );
 
   $aggregate_assignments_s = $app->learningLockerDb->fetchAggregate($pipeline_assignments_s);
+  //error_log(print_r($aggregate_assignments_s, true)); // XXX REMOVEME
 
   $response->json(array(
     'course' => $course_id,
@@ -606,8 +626,9 @@ $klein->respond('/course/[i:course]/lesson/[i:lesson]/unit/[i:unit]', function (
         'count' => isset($aggregate_assignments_v['result'][0]['visitors']) ? count($aggregate_assignments_v['result'][0]['visitors']) : 0,
       ),
       'submitted_assignments' => array(
-        'count' => isset($aggregate_assignments_s['result'][0]['visitors']) ? count($aggregate_assignments_s['result'][0]['visitors']) : 0,
-        'average_score' => isset($aggregate_assignments_s['result'][0]['averageScore']) ? count($aggregate_assignments_s['result'][0]['averageScore']) : 0,
+        'count' => isset($aggregate_assignments_s['result'][0]['count']) ? $aggregate_assignments_s['result'][0]['count'] : 0,
+        'unique_users' => isset($aggregate_assignments_s['result'][0]['visitors']) ? count($aggregate_assignments_s['result'][0]['visitors']) : 0,
+        'average_score' => isset($aggregate_assignments_s['result'][0]['averageScore']) ? $aggregate_assignments_s['result'][0]['averageScore'] : 0,
       )
     ),
   ));
