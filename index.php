@@ -604,7 +604,57 @@ $klein->respond('/course/[i:course]/lesson/[i:lesson]/unit/[i:unit]', function (
   );
 
   $aggregate_assignments_s = $app->learningLockerDb->fetchAggregate($pipeline_assignments_s);
-  //error_log(print_r($aggregate_assignments_s, true)); // XXX REMOVEME
+
+  $tmp_parent_uris = $assignmments_uris;
+  $tmp_parent_uris[] = $app->uriBuilder->buildUnitUri($unit_id);
+
+  $popular_pipeline = array(
+    array(
+      '$match' => array(
+        'statement.verb.id' => $app->xapiHelpers->getVisitedUri(),
+        'statement.context.contextActivities.parent' => array(
+          '$elemMatch' => array(
+            'id' => array(
+              '$in' => $tmp_parent_uris,
+            ),
+          ),
+        ),
+      ),
+    ),
+    array(
+      '$group' => array(
+        '_id' => '$statement.object.id',
+        'name' => array(
+          '$first' => '$statement.object.definition.name', // TODO Check if taking last also is possible
+        ),
+        'count' => array(
+          '$sum' => 1,
+        ),
+      ),
+    ),
+    array(
+      '$sort' => array(
+        'count' => -1,
+      ),
+    ),
+    array(
+      '$limit' => 10,
+    ),
+  );
+
+  $popular_aggregate = $app->learningLockerDb->fetchAggregate($popular_pipeline);
+
+  $resources = array();
+  if ( $popular_aggregate['ok'] == 1 && isset($popular_aggregate['result']) && count($popular_aggregate['result']) > 0 ) {
+    foreach($popular_aggregate['result'] as $resource) {
+      $resources[] = array(
+        'url' => $resource['_id'],
+        'title' => $app->learningLockerDb->getFirstValueFromArray($resource['name']),
+        'views' => $resource['count'],
+        'language' => $app->learningLockerDb->getFirstKeyFromArray($resource['name']),
+      );
+    }
+  }
 
   $response->json(array(
     'course' => $course_id,
@@ -631,6 +681,7 @@ $klein->respond('/course/[i:course]/lesson/[i:lesson]/unit/[i:unit]', function (
         'average_score' => isset($aggregate_assignments_s['result'][0]['averageScore']) ? $aggregate_assignments_s['result'][0]['averageScore'] : 0,
       )
     ),
+    'resources' => $resources,
   ));
 });
 

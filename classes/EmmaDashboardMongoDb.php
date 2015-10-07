@@ -37,6 +37,18 @@ class EmmaDashboardMongoDb {
   }
 
   /**
+   * Extracts keys from array and returns the first one.
+   * Mainly used to extract the language setting.
+   * @param  array $array An array to extract the key from
+   * @return mixed        Extracted first key
+   */
+  public static function getFirstKeyFromArray($array) {
+    $keys = array_keys($array);
+
+    return $keys[0];
+  }
+
+  /**
    * Fetch dat from database using find()
    * @param  array $query Query to run
    * @return MongoCollection Collection of ruturned documents
