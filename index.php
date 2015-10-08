@@ -56,11 +56,13 @@ if ( EDB_ENABLE_CORS ) {
    * Add CORS filter which allows any origin
    */
   $klein->respond(function ($request, $response) {
+    // Allow any origin and only GET and OPTIONS requests
     $response->header('Access-Control-Allow-Origin', '*');
     $response->header('Access-Control-Allow-Methods', 'GET', 'OPTIONS');
   });
 }
 
+// Course participants endpoint
 $klein->respond('/course/[i:id]/participants', function ($request, $response, $service, $app) {
   $course_id = $request->param('id');
 
@@ -83,7 +85,7 @@ $klein->respond('/course/[i:id]/participants', function ($request, $response, $s
   $cursor = $app->learningLockerDb->fetchData($query);
 
   foreach( $cursor as $document ) {
-    $timestamp_date = strftime('%Y-%m-%d', strtotime($document['statement']['timestamp']));
+    $timestamp_date = $app->learningLockerDb->formatTimestampDate($document['statement']['timestamp']);
     $verb_id = $document['statement']['verb']['id'];
 
     if ( !array_key_exists($timestamp_date, $dates_and_counts) ) {
@@ -116,6 +118,7 @@ $klein->respond('/course/[i:id]/participants', function ($request, $response, $s
     }
 
     // XXX This probably is not the best solution
+    // TODO Consider loading the Course Title from the Web Service
     if ( !$course_title ) {
       $course_title = array_values($document['statement']['object']['definition']['name']);
       $course_title = $course_title[0];
@@ -132,6 +135,7 @@ $klein->respond('/course/[i:id]/participants', function ($request, $response, $s
   ));
 });
 
+// Course activity stream endpoint
 $klein->respond('/course/[i:id]/activity_stream', function ($request, $response, $service, $app) {
   $course_id = $request->param('id');
 
@@ -184,8 +188,8 @@ $klein->respond('/course/[i:id]/activity_stream', function ($request, $response,
   $cursor->limit(25);
 
   foreach($cursor as $document) {
-    $timestamp_date = strftime('%Y-%m-%d', strtotime($document['statement']['timestamp']));
-    $timestamp_time = strftime('%H:%M', strtotime($document['statement']['timestamp']));
+    $timestamp_date = $app->learningLockerDb->formatTimestampDate($document['statement']['timestamp']);
+    $timestamp_time = $app->learningLockerDb->formatTimestampTime($document['statement']['timestamp']);
 
     if ( !array_key_exists($timestamp_date, $dates_activities) ) {
       $dates_activities[$timestamp_date] = array(
@@ -194,65 +198,21 @@ $klein->respond('/course/[i:id]/activity_stream', function ($request, $response,
       );
     }
 
-    if ( $document['statement']['verb']['id'] === $app->xapiHelpers->getJoinUri() ) {
-      $dates_activities[$timestamp_date]['activities'][] = array(
-        'name' => $document['statement']['actor']['name'],
-        'type' => 'joined',
-        'title' => $app->learningLockerDb->getFirstValueFromArray($document['statement']['object']['definition']['name']),
-        'url' => $document['statement']['object']['id'],
-        'time' => $timestamp_time,
-      );
-    } else if ( $document['statement']['verb']['id'] === $app->xapiHelpers->getLeaveUri() ) {
-      $dates_activities[$timestamp_date]['activities'][] = array(
-        'name' => $document['statement']['actor']['name'],
-        'type' => 'left',
-        'title' => $app->learningLockerDb->getFirstValueFromArray($document['statement']['object']['definition']['name']),
-        'url' => $document['statement']['object']['id'],
-        'time' => $timestamp_time,
-      );
-    } else if ( $document['statement']['verb']['id'] === $app->xapiHelpers->getVisitedUri() ) {
-      $dates_activities[$timestamp_date]['activities'][] = array(
-        'name' => $document['statement']['actor']['name'],
-        'type' => 'visited',
-        'title' => $app->learningLockerDb->getFirstValueFromArray($document['statement']['object']['definition']['name']),
-        'url' => $document['statement']['object']['id'],
-        'time' => $timestamp_time,
-      );
-    } else if ( $document['statement']['verb']['id'] === $app->xapiHelpers->getAnsweredUri() ) {
-      $dates_activities[$timestamp_date]['activities'][] = array(
-        'name' => $document['statement']['actor']['name'],
-        'type' => 'answered',
-        'title' => $app->learningLockerDb->getFirstValueFromArray($document['statement']['object']['definition']['name']),
-        'url' => $document['statement']['object']['id'],
-        'time' => $timestamp_time,
-      );
-    } else if ( $document['statement']['verb']['id'] === $app->xapiHelpers->getRespondedUri() ) {
-      $dates_activities[$timestamp_date]['activities'][] = array(
-        'name' => $document['statement']['actor']['name'],
-        'type' => 'responded',
-        'title' => $app->learningLockerDb->getFirstValueFromArray($document['statement']['object']['definition']['name']),
-        'url' => $document['statement']['object']['id'],
-        'time' => $timestamp_time,
-      );
-    } else if ( $document['statement']['verb']['id'] === $app->xapiHelpers->getCreateUri() ) {
-      $dates_activities[$timestamp_date]['activities'][] = array(
-        'name' => $document['statement']['actor']['name'],
-        'type' => 'commented',
-        'title' => $app->learningLockerDb->getFirstValueFromArray($document['statement']['object']['definition']['name']),
-        'url' => $document['statement']['object']['id'],
-        'time' => $timestamp_time,
-      );
-    } else {
+    $single_activity = array(
+      'name' => $document['statement']['actor']['name'],
+      'type' => $app->xapiHelpers->getActivityTypeFromVerbId($document['statement']['verb']['id']),
+      'title' => $app->learningLockerDb->getFirstValueFromArray($document['statement']['object']['definition']['name']),
+      'url' => $document['statement']['object']['id'],
+      'time' => $timestamp_time,
+    );
+
+    if ($single_activity['type'] == $app->xapiHelpers->getDefaultUnknownActivityType()) {
       // This should not be possible, but will be kept just in case
+      error_log('Unknown activity type, should not be present.');
       error_log(print_r($document, true));
-      $dates_activities[$timestamp_date]['activities'][] = array(
-        'name' => $document['statement']['actor']['name'],
-        'type' => 'UNKNOWN ACTIVITY TYPE',
-        'title' => $app->learningLockerDb->getFirstValueFromArray($document['statement']['object']['definition']['name']),
-        'url' => $document['statement']['object']['id'],
-        'time' => $timestamp_time,
-      );
     }
+
+    $dates_activities[$timestamp_date]['activities'][] = $single_activity;
   }
 
   $response->json(array(
@@ -261,6 +221,7 @@ $klein->respond('/course/[i:id]/activity_stream', function ($request, $response,
   ));
 });
 
+// Course overview endpoint
 $klein->respond('/course/[i:id]/overview', function ($request, $response, $service, $app) {
   $course_id = $request->param('id');
 
@@ -334,50 +295,17 @@ $klein->respond('/course/[i:id]/overview', function ($request, $response, $servi
     }
   }
 
-  $popular_pipeline = array(
-    array(
-      '$match' => array(
-        'statement.verb.id' => $app->xapiHelpers->getVisitedUri(),
-        'statement.context.contextActivities.grouping' => array(
-          '$elemMatch' => array(
-            'id' => $app->uriBuilder->buildCourseUri($course_id),
-          ),
-        ),
+  // Popular resources
+  $popular_query = array(
+    'statement.verb.id' => $app->xapiHelpers->getVisitedUri(),
+    'statement.context.contextActivities.grouping' => array(
+      '$elemMatch' => array(
+        'id' => $app->uriBuilder->buildCourseUri($course_id),
       ),
-    ),
-    array(
-      '$group' => array(
-        '_id' => '$statement.object.id',
-        'name' => array(
-          '$first' => '$statement.object.definition.name', // TODO Check if taking last also is possible
-        ),
-        'count' => array(
-          '$sum' => 1,
-        ),
-      ),
-    ),
-    array(
-      '$sort' => array(
-        'count' => -1,
-      ),
-    ),
-    array(
-      '$limit' => 25,
     ),
   );
 
-  $popular_aggregate = $app->learningLockerDb->fetchAggregate($popular_pipeline);
-
-  $resources = array();
-  if ( $popular_aggregate['ok'] == 1 && isset($popular_aggregate['result']) && count($popular_aggregate['result']) > 0 ) {
-    foreach($popular_aggregate['result'] as $resource) {
-      $resources[] = array(
-        'url' => $resource['_id'],
-        'title' => $app->learningLockerDb->getFirstValueFromArray($resource['name']),
-        'views' => $resource['count'],
-      );
-    }
-  }
+  $resources = $app->learningLockerDb->getPopularResourcedData($popular_query, 25);
 
   $response->json(array(
     'id' => $course_id,
@@ -389,6 +317,7 @@ $klein->respond('/course/[i:id]/overview', function ($request, $response, $servi
   ));
 });
 
+// Course lessons endpoint
 $klein->respond('/course/[i:id]/lessons', function ($request, $response, $service, $app) {
   $course_id = $request->param('id');
 
@@ -422,6 +351,7 @@ $klein->respond('/course/[i:id]/lessons', function ($request, $response, $servic
   ));
 });
 
+// Course Lesson Unit endpoint
 $klein->respond('/course/[i:course]/lesson/[i:lesson]/unit/[i:unit]', function ($request, $response, $service, $app) {
   $course_id = $request->param('course');
   $lesson_id = $request->param('lesson');
@@ -430,6 +360,7 @@ $klein->respond('/course/[i:course]/lesson/[i:lesson]/unit/[i:unit]', function (
   $students_response = $app->serviceCaller->getCourseStudents($course_id);
   $students = json_decode($students_response);
   $students_count = count($students);
+  $active_students_mailto = array_map(function ($email) { return 'mailto:' . $email; }, $students);
 
   $structure_response = $app->serviceCaller->getCourseStructure($course_id);
   $structure = json_decode($structure_response);
@@ -443,6 +374,10 @@ $klein->respond('/course/[i:course]/lesson/[i:lesson]/unit/[i:unit]', function (
     $assignmments_uris[] = $app->uriBuilder->buildAssignmentUri($assignment->id);
   }
 
+  $assignments_and_unit_uris = $assignmments_uris;
+  $assignments_and_unit_uris[] = $app->uriBuilder->buildUnitUri($unit_id);
+
+  // Unit visitors count
   $query = array(
     'statement.verb.id' => $app->xapiHelpers->getVisitedUri(),
     'statement.object.id' => array(
@@ -451,35 +386,19 @@ $klein->respond('/course/[i:course]/lesson/[i:lesson]/unit/[i:unit]', function (
       ),
     ),
     'statement.actor.mbox' => array(
-      '$in' => array_map(function ($email) { return 'mailto:' . $email; }, $students),
+      '$in' => $active_students_mailto,
     ),
   );
 
-  $pipeline = array(
-    array(
-      '$match' => $query,
-    ),
-    array(
-      '$group' => array(
-        '_id' => 'null',
-        'visitors' => array(
-          '$addToSet' => '$statement.actor.mbox',
-        ),
-      ),
-    ),
-  );
+  $unit_visitors_count = $app->learningLockerDb->getUniqueVisitorsCount($query);
 
-  $aggregate = $app->learningLockerDb->fetchAggregate($pipeline);
-
-  $tmp_parent_uris = $assignmments_uris;
-  $tmp_parent_uris[] = $app->uriBuilder->buildUnitUri($unit_id);
-
+  // Material visitors count
   $query_materials = array(
     'statement.verb.id' => $app->xapiHelpers->getVisitedUri(),
     'statement.context.contextActivities.parent' => array(
       '$elemMatch' => array(
         'id' => array(
-          '$in' => $tmp_parent_uris,
+          '$in' => $assignments_and_unit_uris,
         )
       ),
     ),
@@ -487,93 +406,51 @@ $klein->respond('/course/[i:course]/lesson/[i:lesson]/unit/[i:unit]', function (
       '$ne' => $app->xapiHelpers->getLinkTypeUri(),
     ),
     'statement.actor.mbox' => array(
-      '$in' => array_map(function ($email) { return 'mailto:' . $email; }, $students),
+      '$in' => $active_students_mailto,
     ),
   );
 
-  $pipeline_materials = array(
-    array(
-      '$match' => $query_materials,
-    ),
-    array(
-      '$group' => array(
-        '_id' => 'null',
-        'visitors' => array(
-          '$addToSet' => '$statement.actor.mbox',
-        ),
-      ),
-    ),
-  );
+  $material_visitors_count = $app->learningLockerDb->getUniqueVisitorsCount($query_materials);
 
-  $aggregate_materials = $app->learningLockerDb->fetchAggregate($pipeline_materials);
-
-  $tmp_parent_uris = $assignmments_uris;
-  $tmp_parent_uris[] = $app->uriBuilder->buildUnitUri($unit_id);
-
+  // Links visitors count
   $query_links = array(
     'statement.verb.id' => $app->xapiHelpers->getVisitedUri(),
     'statement.context.contextActivities.parent' => array(
       '$elemMatch' => array(
         'id' => array(
-          '$in' => $tmp_parent_uris,
+          '$in' => $assignments_and_unit_uris,
         )
       ),
     ),
     'statement.object.definition.type' => $app->xapiHelpers->getLinkTypeUri(),
     'statement.actor.mbox' => array(
-      '$in' => array_map(function ($email) { return 'mailto:' . $email; }, $students),
+      '$in' => $active_students_mailto,
     ),
   );
 
-  $pipeline_links = array(
-    array(
-      '$match' => $query_links,
-    ),
-    array(
-      '$group' => array(
-        '_id' => 'null',
-        'visitors' => array(
-          '$addToSet' => '$statement.actor.mbox',
-        ),
-      ),
-    ),
-  );
+  $link_visitors_count = $app->learningLockerDb->getUniqueVisitorsCount($query_links);
 
-  $aggregate_links = $app->learningLockerDb->fetchAggregate($pipeline_links);
-
+  // Assignments views count
   $query_assignments_v = array(
     'statement.verb.id' => $app->xapiHelpers->getVisitedUri(),
     'statement.object.id' => array(
       '$in' => $assignmments_uris,
     ),
     'statement.actor.mbox' => array(
-      '$in' => array_map(function ($email) { return 'mailto:' . $email; }, $students),
+      '$in' => $active_students_mailto,
     ),
   );
 
-  $pipeline_assignments_v = array(
-    array(
-      '$match' => $query_assignments_v,
-    ),
-    array(
-      '$group' => array(
-        '_id' => 'null',
-        'visitors' => array(
-          '$addToSet' => '$statement.actor.mbox',
-        ),
-      ),
-    ),
-  );
+  $assignment_views_count = $app->learningLockerDb->getUniqueVisitorsCount($query_assignments_v);
 
-  $aggregate_assignments_v = $app->learningLockerDb->fetchAggregate($pipeline_assignments_v);
-
+  // Assignment submission count, unique users and average score
   $query_assignments_s = array(
     'statement.verb.id' => $app->xapiHelpers->getAnsweredUri(),
     'statement.object.id' => array(
       '$in' => $assignmments_uris,
     ),
     'statement.actor.mbox' => array(
-      '$in' => array_map(function ($email) { return 'mailto:' . $email; }, $students),
+      '$in' => $active_students_mailto,
     ),
   );
 
@@ -605,56 +482,19 @@ $klein->respond('/course/[i:course]/lesson/[i:lesson]/unit/[i:unit]', function (
 
   $aggregate_assignments_s = $app->learningLockerDb->fetchAggregate($pipeline_assignments_s);
 
-  $tmp_parent_uris = $assignmments_uris;
-  $tmp_parent_uris[] = $app->uriBuilder->buildUnitUri($unit_id);
-
-  $popular_pipeline = array(
-    array(
-      '$match' => array(
-        'statement.verb.id' => $app->xapiHelpers->getVisitedUri(),
-        'statement.context.contextActivities.parent' => array(
-          '$elemMatch' => array(
-            'id' => array(
-              '$in' => $tmp_parent_uris,
-            ),
-          ),
+  // Popular resources
+  $popular_query = array(
+    'statement.verb.id' => $app->xapiHelpers->getVisitedUri(),
+    'statement.context.contextActivities.parent' => array(
+      '$elemMatch' => array(
+        'id' => array(
+          '$in' => $assignments_and_unit_uris,
         ),
       ),
-    ),
-    array(
-      '$group' => array(
-        '_id' => '$statement.object.id',
-        'name' => array(
-          '$first' => '$statement.object.definition.name', // TODO Check if taking last also is possible
-        ),
-        'count' => array(
-          '$sum' => 1,
-        ),
-      ),
-    ),
-    array(
-      '$sort' => array(
-        'count' => -1,
-      ),
-    ),
-    array(
-      '$limit' => 10,
     ),
   );
 
-  $popular_aggregate = $app->learningLockerDb->fetchAggregate($popular_pipeline);
-
-  $resources = array();
-  if ( $popular_aggregate['ok'] == 1 && isset($popular_aggregate['result']) && count($popular_aggregate['result']) > 0 ) {
-    foreach($popular_aggregate['result'] as $resource) {
-      $resources[] = array(
-        'url' => $resource['_id'],
-        'title' => $app->learningLockerDb->getFirstValueFromArray($resource['name']),
-        'views' => $resource['count'],
-        'language' => $app->learningLockerDb->getFirstKeyFromArray($resource['name']),
-      );
-    }
-  }
+  $resources = $app->learningLockerDb->getPopularResourcedData($popular_query, 10);
 
   $response->json(array(
     'course' => $course_id,
@@ -664,16 +504,16 @@ $klein->respond('/course/[i:course]/lesson/[i:lesson]/unit/[i:unit]', function (
     'assignments_count' => count($assignmments_uris),
     'learning_content' => array(
       'unit' => array(
-        'count' => isset($aggregate['result'][0]['visitors']) ? count($aggregate['result'][0]['visitors']) : 0,
+        'count' => $unit_visitors_count,
       ),
       'materials' => array(
-        'count' => isset($aggregate_materials['result'][0]['visitors']) ? count($aggregate_materials['result'][0]['visitors']) : 0,
+        'count' => $material_visitors_count,
       ),
       'hyperlinks' => array(
-        'count' => isset($aggregate_links['result'][0]['visitors']) ? count($aggregate_links['result'][0]['visitors']) : 0,
+        'count' => $link_visitors_count,
       ),
       'viewed_assignments' => array(
-        'count' => isset($aggregate_assignments_v['result'][0]['visitors']) ? count($aggregate_assignments_v['result'][0]['visitors']) : 0,
+        'count' => $assignment_views_count,
       ),
       'submitted_assignments' => array(
         'count' => isset($aggregate_assignments_s['result'][0]['count']) ? $aggregate_assignments_s['result'][0]['count'] : 0,

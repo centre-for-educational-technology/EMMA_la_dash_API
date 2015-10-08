@@ -1,6 +1,7 @@
 <?php
 
 class EmmaDashboardXapiHelpers {
+  const UNKNOWN_ACTIVITY_TYPE = 'UNKNOWN ACTIVITY TYPE';
   public static function getJoinUri () {
     return 'http://activitystrea.ms/schema/1.0/join';
   }
@@ -27,5 +28,38 @@ class EmmaDashboardXapiHelpers {
 
   public static function getLinkTypeUri () {
     return 'http://adlnet.gov/expapi/activities/link';
+  }
+
+  /**
+   * Retruns unknown activity type constant
+   * @return string Returned value
+   */
+  public static function getDefaultUnknownActivityType() {
+    return self::UNKNOWN_ACTIVITY_TYPE;
+  }
+
+  /**
+   * Returns a type for verb ID (URI) or unknown default type.
+   * @param  string $verb_id Verb uniqui ID (URI)
+   * @return string          Type from verb ID or unknown default
+   */
+  public static function getActivityTypeFromVerbId($verb_id) {
+    $type = self::UNKNOWN_ACTIVITY_TYPE;
+
+    if ( $verb_id === self::getJoinUri() ) {
+      $type = 'joined';
+    } else if ( $verb_id === self::getLeaveUri() ) {
+      $type = 'left';
+    } else if ( $verb_id === self::getVisitedUri() ) {
+      $type = 'visited';
+    } else if ( $verb_id === self::getAnsweredUri() ) {
+      $type = 'answered';
+    } else if ( $verb_id === self::getRespondedUri() ) {
+      $type = 'responded';
+    } else if ( $verb_id === self::getCreateUri() ) {
+      $type = 'commented';
+    }
+
+    return $type;
   }
 }
