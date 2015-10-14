@@ -7,6 +7,7 @@ require_once __DIR__ . '/classes/EmmaDashboardUriBuilder.php';
 require_once __DIR__ . '/classes/EmmaDashboardXapiHelpers.php';
 require_once __DIR__ . '/classes/EmmaDashboardMongoDb.php';
 require_once __DIR__ . '/classes/EmmaDashboardServiceCaller.php';
+require_once __DIR__ . '/classes/EmmaDashboardStorage.php';
 
 
 $klein = new \Klein\Klein();
@@ -47,6 +48,9 @@ $klein->respond(function ($request, $response, $service, $app) use ($klein) {
   });
   $app->register('serviceCaller', function () {
     return new EmmaDashboardServiceCaller(EDB_PLATFORM_URL, EDB_SERVICE_USERNAME, EDB_SERVICE_PASSWORD);
+  });
+  $app->register('storageHelper', function () {
+    return new EmmaDashboardStorage();
   });
 });
 
@@ -148,7 +152,7 @@ $klein->respond('/course/[i:id]/activity_stream', function ($request, $response,
     '$or' => array(
       array(
         'statement.verb.id' => $app->xapiHelpers->getCreateUri(),
-        'statement.object.definition.type' => 'http://activitystrea.ms/schema/1.0/comment',
+        'statement.object.definition.type' => $app->xapiHelpers->getCommentSchemaUri(),
         'statement.context.contextActivities.grouping' => array(
           '$elemMatch' => array(
             'id' => $app->uriBuilder->buildCourseUri($course_id),
@@ -524,5 +528,147 @@ $klein->respond('/course/[i:course]/lesson/[i:lesson]/unit/[i:unit]', function (
     'resources' => $resources,
   ));
 });
+
+// Course lessons endpoint
+$klein->respond('/course/[i:id]/sna', function ($request, $response, $service, $app) {
+  $file_name = 'course_sna.json';
+
+  $course_id = $request->param('id');
+
+  // Try to load from storage
+  $file_contents = $app->storageHelper->readFileIfNotOutdated($course_id, $file_name);
+  if ( $file_contents ) {
+    $response->json(json_decode($file_contents));
+    return;
+  }
+
+  $students_response = $app->serviceCaller->getCourseStudents($course_id);
+  $students = json_decode($students_response);
+
+  $nodes = array();
+  $edges = array();
+
+  foreach ( $students as $student ) {
+    $nodes['mailto:' . $student] = array(
+      'id' => 'mailto:' . $student,
+      'label' => $student,
+      'size' => '1',
+    );
+  }
+
+  $query = array(
+    'statement.context.contextActivities.grouping' => array(
+      '$elemMatch' => array(
+        'id' => $app->uriBuilder->buildCourseUri($course_id),
+      ),
+    ),
+    'statement.verb.id' => array(
+      '$in' => array(
+        $app->xapiHelpers->getRespondedUri(),
+        $app->xapiHelpers->getCreateUri(),
+      ),
+    ),
+    'statement.object.definition.type' => $app->xapiHelpers->getCommentSchemaUri(),
+    'statement.actor.mbox' => array(
+      '$in' => array_keys($nodes),
+    ),
+  );
+
+  $pipeline = array(
+    array(
+      '$match' => $query,
+    ),
+    array(
+      '$group' => array(
+        '_id' => '$statement.context.contextActivities.parent.id',
+        'commenters' => array(
+          '$push' => '$statement.actor.mbox',
+        ),
+      ),
+    ),
+  );
+
+  $aggregate = $app->learningLockerDb->fetchAggregate($pipeline);
+
+  //error_log(print_r($aggregate, true));
+
+  if ( isset($aggregate['ok']) && (int)$aggregate['ok'] === 1 && isset($aggregate['result']) && is_array($aggregate['result']) && count($aggregate['result']) > 0 ) {
+    $ids = array();
+    foreach ( $aggregate['result'] as $single ) {
+      if ( !in_array($single['_id'][0], $ids) ) {
+        $ids[] = $single['_id'][0];
+      }
+    }
+
+    if ( count($ids) > 0 ) {}
+      $resources_query = array(
+        'statement.context.contextActivities.grouping' => array(
+          '$elemMatch' => array(
+            'id' => $app->uriBuilder->buildCourseUri($course_id),
+          ),
+        ),
+        'statement.verb.id' => $app->xapiHelpers->getCreateUri(),
+        'statement.object.id' => array(
+          '$in' => $ids,
+        ),
+        'statement.actor.mbox' => array(
+          '$in' => array_keys($nodes),
+        ),
+      );
+
+      $cursor = $app->learningLockerDb->fetchData($resources_query);
+      $owner_lookup = array();
+      foreach ($cursor as $resource ) {
+        $owner_lookup[$resource['statement']['object']['id']] = $resource['statement']['actor']['mbox'];
+      }
+
+      //error_log(print_r($owner_lookup, true));
+
+      foreach ($aggregate['result'] as $single ) {
+        $owner = isset($owner_lookup[$single['_id'][0]]) ? $owner_lookup[$single['_id'][0]] : null;
+
+        if ( !$owner ) {
+          error_log('NO OWNER FOR RESOURCE: ' . $single['_id'][0]);
+          continue;
+        }
+        // XXX Should fail if owner could not be determined
+        foreach ($single['commenters'] as $commenter) {
+          if ( !array_key_exists($commenter, $nodes) ) {
+            // XXX This is crazy
+            continue;
+          }
+
+          if ( !isset($nodes[$owner]) ) {
+            error_log('NOT IN USERS: ' . $owner);
+            continue;
+          }
+
+          $nodes[$owner]['size'] += 1;
+          if ( isset($edges[$owner . ':' . $commenter]) ) {
+            $edges[$owner . ':' . $commenter]['size'] += 1;
+          } else {
+            $edges[$owner . ':' . $commenter] = array(
+              'id' => $owner . ':' . $commenter,
+              'source' => $commenter,
+              'target' => $owner,
+              'size' => 1,
+            );
+          }
+        }
+      }
+  }
+
+  $response_data = array(
+    'id' => $course_id,
+    'nodes' => array_values($nodes),
+    'edges' => array_values($edges),
+  );
+
+  // Try to save into storage
+  $app->storageHelper->createOrUpdateFile($course_id, $file_name, json_encode($response_data));
+
+  $response->json($response_data);
+});
+
 
 $klein->dispatch($request);

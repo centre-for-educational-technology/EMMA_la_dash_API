@@ -30,6 +30,10 @@ class EmmaDashboardXapiHelpers {
     return 'http://adlnet.gov/expapi/activities/link';
   }
 
+  public static function getCommentSchemaUri() {
+    return 'http://activitystrea.ms/schema/1.0/comment';
+  }
+
   /**
    * Retruns unknown activity type constant
    * @return string Returned value
