@@ -51,16 +51,17 @@ class EmmaDashboardMongoDb {
   /**
    * Fetch dat from database using find()
    * @param  array $query Query to run
+   * @param  array $fields (OPTIONAL) Fileds to include into results (_id is always included)
    * @return MongoCollection Collection of ruturned documents
    */
-  public function fetchData ($query) {
+  public function fetchData ($query, $fields = array()) {
     $query['lrs._id'] = $this->lrsId;
 
     $db = $this->connection->selectDB($this->database);
 
     $collection = $db->statements;
 
-    return $collection->find($query);
+    return $collection->find($query, $fields);
   }
 
   public function fetchCount($query, $options = array()) {

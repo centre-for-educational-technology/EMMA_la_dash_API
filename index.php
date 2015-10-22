@@ -186,6 +186,15 @@ $klein->respond('/course/[i:id]/activity_stream', function ($request, $response,
   );
 
   $cursor = $app->learningLockerDb->fetchData($query);
+  /* This is an example of only requesting needed data from the database
+  $cursor = $app->learningLockerDb->fetchData($query, array(
+    '_id' => true,
+    'statement.timestamp' => true,
+    'statement.actor.name' => true,
+    'statement.verb.id' => true,
+    'statement.object.id' => true,
+    'statement.object.definition.name' => true,
+  ));*/
   $cursor->sort(array(
     'statement.timestamp' => -1
   ));
@@ -212,8 +221,8 @@ $klein->respond('/course/[i:id]/activity_stream', function ($request, $response,
 
     if ($single_activity['type'] == $app->xapiHelpers->getDefaultUnknownActivityType()) {
       // This should not be possible, but will be kept just in case
-      error_log('Unknown activity type, should not be present.');
-      error_log(print_r($document, true));
+      //error_log('Unknown activity type, should not be present.');
+      //error_log(print_r($document, true));
     }
 
     $dates_activities[$timestamp_date]['activities'][] = $single_activity;
@@ -657,7 +666,7 @@ $klein->respond('/course/[i:id]/sna', function ($request, $response, $service, $
         $owner = isset($owner_lookup[$single['_id'][0]]) ? $owner_lookup[$single['_id'][0]] : null;
 
         if ( !$owner ) {
-          error_log('NO OWNER FOR RESOURCE: ' . $single['_id'][0]);
+          //error_log('NO OWNER FOR RESOURCE: ' . $single['_id'][0]);
           continue;
         }
         // XXX Should fail if owner could not be determined
@@ -668,7 +677,7 @@ $klein->respond('/course/[i:id]/sna', function ($request, $response, $service, $
           }
 
           if ( !isset($nodes[$owner]) ) {
-            error_log('NOT IN USERS: ' . $owner);
+            //error_log('NOT IN USERS: ' . $owner);
             continue;
           }
 
