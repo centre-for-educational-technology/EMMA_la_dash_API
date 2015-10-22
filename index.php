@@ -556,6 +556,39 @@ $klein->respond('/course/[i:id]/sna', function ($request, $response, $service, $
     );
   }
 
+  $names_query = array(
+    'statement.verb.id' => array(
+      '$in' => array(
+        $app->xapiHelpers->getJoinUri()
+      )
+    ),
+    'statement.object.id' => $app->uriBuilder->buildCourseUri($course_id)
+  );
+
+  $names_pipeline = array(
+    array(
+      '$match' => $names_query,
+    ),
+    array(
+      '$group' => array(
+        '_id' => 'null',
+        'actors' => array(
+          '$addToSet' => '$statement.actor',
+        ),
+      ),
+    ),
+  );
+
+  $names_aggregate = $app->learningLockerDb->fetchAggregate($names_pipeline);
+
+  if ( isset($names_aggregate['ok']) && (int)$names_aggregate['ok'] === 1 && isset($names_aggregate['result']) && is_array($names_aggregate['result']) && count($names_aggregate['result']) > 0 ) {
+    foreach ($names_aggregate['result'][0]['actors'] as $actor) {
+      if ( array_key_exists($actor['mbox'], $nodes) ) {
+        $nodes[ $actor['mbox'] ]['label'] = $actor['name'];
+      }
+    }
+  }
+
   $query = array(
     'statement.context.contextActivities.grouping' => array(
       '$elemMatch' => array(
@@ -590,8 +623,6 @@ $klein->respond('/course/[i:id]/sna', function ($request, $response, $service, $
 
   $aggregate = $app->learningLockerDb->fetchAggregate($pipeline);
 
-  //error_log(print_r($aggregate, true));
-
   if ( isset($aggregate['ok']) && (int)$aggregate['ok'] === 1 && isset($aggregate['result']) && is_array($aggregate['result']) && count($aggregate['result']) > 0 ) {
     $ids = array();
     foreach ( $aggregate['result'] as $single ) {
@@ -621,8 +652,6 @@ $klein->respond('/course/[i:id]/sna', function ($request, $response, $service, $
       foreach ($cursor as $resource ) {
         $owner_lookup[$resource['statement']['object']['id']] = $resource['statement']['actor']['mbox'];
       }
-
-      //error_log(print_r($owner_lookup, true));
 
       foreach ($aggregate['result'] as $single ) {
         $owner = isset($owner_lookup[$single['_id'][0]]) ? $owner_lookup[$single['_id'][0]] : null;
