@@ -2,6 +2,13 @@
 
 A backend API used by Emma Dashboard.
 
+# Requirements
+
+* PHP version 5.3.x or later
+* JSON extension
+* Mongo Client (latest version; tested with 1.6.11)
+* Apache with mod_rewrite
+
 # Installation
 
 1. Install Composer and run: php composer.phar Install
