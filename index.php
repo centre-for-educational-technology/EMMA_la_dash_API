@@ -1,5 +1,7 @@
 <?php
 
+DEFINE('EDB_APP_VERSION', '1.0.0');
+
 require_once __DIR__ . '/config.php';
 
 require_once __DIR__ . '/vendor/autoload.php';
@@ -52,6 +54,8 @@ $klein->respond(function ($request, $response, $service, $app) use ($klein) {
   $app->register('storageHelper', function () {
     return new EmmaDashboardStorage();
   });
+
+  $response->header('edb-app-version', EDB_APP_VERSION);
 });
 
 // Handle CORS filter
@@ -65,6 +69,13 @@ if ( EDB_ENABLE_CORS ) {
     $response->header('Access-Control-Allow-Methods', 'GET', 'OPTIONS');
   });
 }
+
+// Version handler
+$klein->respond('/version', function($request, $response) {
+  $response->json(array(
+    'version' => EDB_APP_VERSION,
+  ));
+});
 
 // Course participants endpoint
 $klein->respond('/course/[i:id]/participants', function ($request, $response, $service, $app) {
