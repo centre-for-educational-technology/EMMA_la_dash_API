@@ -110,6 +110,63 @@ class EmmaDashboardMongoDb {
   }
 
   /**
+   * Return count of unique visitors of statement objects (eg. units) grouped by statement objects
+   * @param  array $query Query to be used
+   * @return int Count of unique visitors or 0
+   */
+  public function getVisitorsCount($query) {
+    $pipeline = array(
+        array(
+            '$match' => $query,
+        ),
+        array(
+            '$group' => array(
+                '_id' => '$statement.object.id',
+                'visitors' => array(
+                    '$addToSet' => '$statement.actor.mbox',
+                ),
+            ),
+        ),
+    );
+
+    $aggregate = $this->fetchAggregate($pipeline);
+
+    $count = 0;
+
+    if(isset($aggregate['result'])) {
+      foreach ($aggregate['result'] as $single) {
+        $count += count($single['visitors']);
+      }
+    }
+
+    return $count;
+  }
+
+  public function getVisitorAccessedMaterial($query) {
+    $pipeline = array(
+        array(
+            '$match' => $query,
+        ),
+        array(
+            '$group' => array(
+                '_id' => '$statement.object.id',
+//                'title' => array(
+//                    '$first' => '$statement.object.definition.name',
+//                ),
+            ),
+        ),
+    );
+
+    $aggregate = $this->fetchAggregate($pipeline);
+
+
+
+
+    return isset($aggregate['result'])? ($aggregate['result']) : 'empty';
+
+  }
+
+  /**
    * Return and array of popular resources
    * @param  array  $query Query to be used with aggregate
    * @param  integer $limit Limit of resources to enforce

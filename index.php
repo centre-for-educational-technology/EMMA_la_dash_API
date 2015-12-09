@@ -341,6 +341,216 @@ $klein->respond('/course/[i:id]/overview', function ($request, $response, $servi
   ));
 });
 
+
+// Student progress overview endpoint
+$klein->respond('/course/[i:id]/student/[:mbox]', function ($request, $response, $service, $app) {
+
+  $mbox = $request->param('mbox');
+
+  $course_id = $request->param('id');
+
+  $structure_response = $app->serviceCaller->getCourseStructure($course_id);
+  $structure = json_decode($structure_response);
+
+
+  $lessons_with_units = array();
+
+  $units = array();
+
+  $assignments = array();
+
+  if ( isset($structure->lessons) ) {
+    foreach( $structure->lessons as $lesson ) {
+      $lessons_with_units[$lesson->id] = array(
+          'id' => $lesson->id,
+          'title' => $lesson->title,
+          'url' => $app->uriBuilder->buildUnitUri($lesson->id),
+          'units' => array(),
+      );
+      if ( isset($lesson->units) ) {
+        foreach ( $lesson->units as $unit ) {
+          $lessons_with_units[$lesson->id]['units'][$unit->id] = array(
+              'id' => $unit->id,
+              'url' => $app->uriBuilder->buildUnitUri($unit->id),
+              'title' => $unit->title,
+          );
+          array_push($units, $app->uriBuilder->buildUnitUri($unit->id));
+          if (isset ($unit->assignments)){
+            foreach ($unit->assignments as $assignment){
+              $lessons_with_units[$lesson->id]['units'][$unit->id]['assignments'][] = array(
+                  'id' => $assignment->id,
+                  'url' => $app->uriBuilder->buildAssignmentUri($assignment->id),
+                  'title' => $assignment->title,
+              );
+              array_push($assignments, $app->uriBuilder->buildAssignmentUri($assignment->id));
+            }
+
+          }
+        }
+      }
+    }
+  }
+
+
+  // Units visited by student
+  $query_units = array(
+      'statement.verb.id' => $app->xapiHelpers->getVisitedUri(),
+      'statement.object.id' => array(
+        '$in' => $units,
+      ),
+      'statement.actor.mbox' => 'mailto:' . $mbox,
+  );
+
+  $units_visited = $app->learningLockerDb->getVisitorAccessedMaterial($query_units);
+
+
+
+
+  // Assignments answered by student
+  $query_assignments = array(
+      'statement.verb.id' => $app->xapiHelpers->getAnsweredUri(),
+      'statement.object.id' => array(
+          '$in' => $assignments,
+      ),
+      'statement.actor.mbox' => 'mailto:' . $mbox,
+  );
+
+
+
+
+  $pipeline_assignments = array(
+      array(
+          '$match' => $query_assignments,
+      ),
+      array(
+          '$group' => array(
+              '_id' => '$statement.object.id',
+              'score_last' => array(
+                  '$last' => '$statement.result.score.scaled',
+              ),
+              'score_avg' => array(
+                  '$avg' => '$statement.result.score.scaled',
+              ),
+              'sesses' => array(
+                  '$last' => '$statement.result.success',
+              ),
+          ),
+      ),
+  );
+
+  $aggregate_assignments = $app->learningLockerDb->fetchAggregate($pipeline_assignments);
+
+  $avg_score_by_me = 0;
+
+  //Round assignment results
+  if(isset($aggregate_assignments['result'])){
+    foreach ( $aggregate_assignments['result'] as $key => $single ) {
+      $aggregate_assignments['result'][$key]['score_last']=round($aggregate_assignments['result'][$key]['score_last'], 2)*100;
+      $aggregate_assignments['result'][$key]['score_avg']=round($aggregate_assignments['result'][$key]['score_avg'], 2)*100;
+      $avg_score_by_me += $aggregate_assignments['result'][$key]['score_avg'];
+
+    }
+    //Count my average score
+    $avg_score_by_me = round($avg_score_by_me/count($aggregate_assignments['result']));
+  }
+
+
+
+
+  // Average number of units visited by others except this student
+  $students_response = $app->serviceCaller->getCourseStudents($course_id);
+  $students = json_decode($students_response);
+  $students_count = count($students);
+
+  $students = array_values(array_diff($students, array($mbox)));
+
+
+  $active_students_mailto = array_map(function ($email) { return 'mailto:' . $email; }, $students);
+
+  $query_units_avg = array(
+      'statement.verb.id' => $app->xapiHelpers->getVisitedUri(),
+      'statement.object.id' => array(
+          '$in' => $units,
+      ),
+      'statement.actor.mbox' => array(
+          '$in' => $active_students_mailto,
+      ),
+  );
+
+  $units_visitors_count = $app->learningLockerDb->getVisitorsCount($query_units_avg);
+
+  $avg_units_visited_by_students = 0;
+
+  if(isset($units_visitors_count)){
+    $avg_units_visited_by_students = floor($units_visitors_count/$students_count);
+  }
+
+
+
+
+
+  // Average assignments score of students except this student
+  $query_assignments_avg = array(
+      'statement.verb.id' => $app->xapiHelpers->getAnsweredUri(),
+      'statement.object.id' => array(
+          '$in' => $assignments,
+      ),
+      'statement.actor.mbox' => array(
+          '$in' => $active_students_mailto,
+      ),
+  );
+
+
+
+  $pipeline_assignments_avg = array(
+      array(
+          '$match' => $query_assignments_avg,
+      ),
+      array(
+          '$group' => array(
+              '_id' => 'null',
+              'visitors' => array(
+                  '$addToSet' => '$statement.actor.mbox',
+              ),
+              'averageScore' => array(
+                  '$avg' => '$statement.result.score.scaled',
+              ),
+          ),
+      ),
+  );
+
+  $avg_score_by_students = $app->learningLockerDb->fetchAggregate($pipeline_assignments_avg);
+  if (isset($avg_score_by_students['result'][0]['averageScore'])){
+    $avg_score_by_students = round($avg_score_by_students['result'][0]['averageScore']*100);
+  }else{
+    $avg_score_by_students = 0;
+  }
+
+
+
+  $response->json(array(
+      'course' => $course_id,
+      'course_title' => $structure->title,
+      'course_start_date' => $structure->startDate,
+      'course_end_date' => $structure->endDate,
+      'learning_content' => array(
+          'materials' => array(
+              'lessons_with_units' => $lessons_with_units,
+              'units_visited' => isset($units_visited) ? $units_visited : 0,
+              'assignments_submitted' => isset($aggregate_assignments['result'])? $aggregate_assignments['result'] : 0,
+          ),
+      ),
+      'structure' => $structure,
+      'units_visited_by_me' => count($units_visited),
+      'total_units' => count($units),
+      'avg_score_by_me' => $avg_score_by_me,
+      'avg_units_visited_by_students' => $avg_units_visited_by_students,
+      'avg_score_by_students' => $avg_score_by_students,
+
+  ));
+});
+
+
 // Course lessons endpoint
 $klein->respond('/course/[i:id]/lessons', function ($request, $response, $service, $app) {
   $course_id = $request->param('id');
@@ -543,6 +753,7 @@ $klein->respond('/course/[i:course]/lesson/[i:lesson]/unit/[i:unit]', function (
         'count' => isset($aggregate_assignments_s['result'][0]['count']) ? $aggregate_assignments_s['result'][0]['count'] : 0,
         'unique_users' => isset($aggregate_assignments_s['result'][0]['visitors']) ? count($aggregate_assignments_s['result'][0]['visitors']) : 0,
         'average_score' => isset($aggregate_assignments_s['result'][0]['averageScore']) ? $aggregate_assignments_s['result'][0]['averageScore'] : 0,
+
       )
     ),
     'resources' => $resources,
