@@ -155,6 +155,7 @@ $klein->respond('/course/[i:id]/activity_stream', function ($request, $response,
   $course_id = $request->param('id');
 
   $dates_activities = array();
+  $activities_count = 0;
 
   // TODO Data for SINCE and UNTIL is missing
   // Need to make sure that only sttements from some time span are used
@@ -209,7 +210,7 @@ $klein->respond('/course/[i:id]/activity_stream', function ($request, $response,
   $cursor->sort(array(
     'statement.timestamp' => -1
   ));
-  $cursor->limit(25);
+  $cursor->limit(100);
 
   foreach($cursor as $document) {
     $timestamp_date = $app->learningLockerDb->formatTimestampDate($document['statement']['timestamp']);
@@ -237,11 +238,13 @@ $klein->respond('/course/[i:id]/activity_stream', function ($request, $response,
     }
 
     $dates_activities[$timestamp_date]['activities'][] = $single_activity;
+    $activities_count++;
   }
 
   $response->json(array(
     'id' => $course_id,
-    'data' => array_values($dates_activities)
+    'data' => array_values($dates_activities),
+    'count' => $activities_count,
   ));
 });
 
