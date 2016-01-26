@@ -686,6 +686,9 @@ $klein->respond('/course/[i:course]/lesson/[i:lesson]/unit/[i:unit]', function (
     'statement.actor.mbox' => array(
       '$in' => $active_students_mailto,
     ),
+    'statement.result.scope.scaled' => array(
+      '$ne' => -1,
+    ),
   );
 
   $pipeline_assignments_s = array(
