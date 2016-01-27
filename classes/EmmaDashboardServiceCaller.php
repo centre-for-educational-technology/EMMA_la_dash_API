@@ -44,12 +44,12 @@ class EmmaDashboardServiceCaller {
     }
 
     $http_code = curl_getinfo($curl, CURLINFO_HTTP_CODE);
-    $conetnt_type = curl_getinfo($curl, CURLINFO_CONTENT_TYPE);
+    $content_type = curl_getinfo($curl, CURLINFO_CONTENT_TYPE);
 
     curl_close($curl);
 
     if ( $http_code !== 200 || strtolower($content_type) !== 'application/json' ) {
-      error_log('Web Service Responded With Error: ' $http_code . ' and content-type ' . $content_type );
+      error_log('Web Service Responded With Error: ' . $http_code . ' and content-type ' . $content_type );
       throw new EmmaDashboardServiceException('Service Error, please contact Administrator.');
     }
 
