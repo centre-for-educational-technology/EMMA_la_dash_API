@@ -4,12 +4,26 @@ class EmmaDashboardServiceException extends Exception {
 }
 
 class EmmaDashboardServiceCaller {
-  public function __construct ($baseUrl, $username, $password) {
+  /**
+   * Constructs the service caller object.
+   * Storage helper is ised as a pointer to an original instance.
+   * @param string $baseUrl       Service base URL
+   * @param string $username      Service username
+   * @param string $password      Service password
+   * @param object $storageHelper Storage helper to use for cache functionality
+   */
+  public function __construct ($baseUrl, $username, $password, &$storageHelper) {
     $this->base = $baseUrl;
     $this->username = $username;
     $this->password = $password;
+    $this->storageHelper = $storageHelper;
   }
 
+  /**
+   * Examine response and raise error if one given. Response should be JSON
+   * encoded string with errors provided.
+   * @param string $json Response JSON
+   */
   private function examineResponse($json) {
     $decoded = json_decode($json);
 
@@ -19,15 +33,47 @@ class EmmaDashboardServiceCaller {
     }
   }
 
+  /**
+   * Get course structure from the service. Will throw an Exception if fails.
+   * @param  integer $id Course identifier
+   * @return string      JSON string with course structure
+   */
   public function getCourseStructure ($id) {
-    return $this->makeCall($this->base . 'api/public/courses/' . $id . '/structure');
+    return $this->makeCall($id, $this->base . 'api/public/courses/' . $id . '/structure', true);
   }
 
+  /**
+   * Get course students from the service. Will thow an Exception if fails.
+   * @param  integer $id Course identifier
+   * @return string      JSON string with an array of students
+   */
   public function getCourseStudents ($id) {
-    return $this->makeCall($this->base . 'api/public/courses/' . $id . '/students');
+    return $this->makeCall($id, $this->base . 'api/public/courses/' . $id . '/students', true);
   }
 
-  private function makeCall ($url) {
+  /**
+   * Make a call to service and return the data.
+   * There is a possibility to use cache. This will fetch data fom cache if
+   * availablt and not yet outdated.
+   * @param  integer $id        Course identifier
+   * @param  string  $url       URL to be called
+   * @param  bool    $use_cache Should cache be used or not
+   * @return string             Response data
+   */
+  private function makeCall ($id, $url, $use_cache = false) {
+    $cache_file_name = null;
+
+    // See if cache is allowed
+    if ( $use_cache ) {
+      $split = explode('/', $url);
+      $cache_file_name = 'course_' . $split[sizeof($split) - 1] . '.json';
+      // Try to load from storage
+      $cached_response = $this->storageHelper->readFileIfNotOutdated($id, $cache_file_name, 300);
+      if ( $cached_response ) {
+        return $cached_response;
+      }
+    }
+
     $curl = curl_init();
 
     curl_setopt_array($curl, array(
@@ -55,9 +101,20 @@ class EmmaDashboardServiceCaller {
 
     $this->examineResponse($result);
 
+    // Cache if allowed
+    if ( $use_cache ) {
+      $this->storageHelper->createOrUpdateFile($id, $cache_file_name, $result);
+    }
+
     return $result;
   }
 
+  /**
+   * Extracts single lesson from a course data object.
+   * @param  integer $lesson_id Lesson identifier
+   * @param  object  $course    Course object with data
+   * @return object             Extracted lesson object
+   */
   public static function extractLessonFromCourse($lesson_id, $course) {
     $current_lesson = array_filter($course->lessons, function ($lesson) use ($lesson_id) {
       return $lesson->id == $lesson_id;
@@ -66,6 +123,12 @@ class EmmaDashboardServiceCaller {
     return array_pop($current_lesson);
   }
 
+  /**
+   * Extracts single unit from a lesson data object.
+   * @param  integer $unit_id Unit identifier
+   * @param  object  $lesson  Lesson object with data
+   * @return object           Extracted unut object
+   */
   public static function extractUnitFromLesson($unit_id, $lesson) {
     $current_unit = array_filter($lesson->units, function ($unit) use ($unit_id) {
       return $unit->id == $unit_id;

@@ -48,11 +48,11 @@ $klein->respond(function ($request, $response, $service, $app) use ($klein) {
   $app->register('xapiHelpers', function () {
     return new EmmaDashboardXapiHelpers();
   });
-  $app->register('serviceCaller', function () {
-    return new EmmaDashboardServiceCaller(EDB_PLATFORM_URL, EDB_SERVICE_USERNAME, EDB_SERVICE_PASSWORD);
-  });
   $app->register('storageHelper', function () {
     return new EmmaDashboardStorage();
+  });
+  $app->register('serviceCaller', function () use ($app) {
+    return new EmmaDashboardServiceCaller(EDB_PLATFORM_URL, EDB_SERVICE_USERNAME, EDB_SERVICE_PASSWORD, $app->storageHelper);
   });
 
   $response->header('edb-app-version', EDB_APP_VERSION);
