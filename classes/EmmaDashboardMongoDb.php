@@ -150,9 +150,6 @@ class EmmaDashboardMongoDb {
         array(
             '$group' => array(
                 '_id' => '$statement.object.id',
-//                'title' => array(
-//                    '$first' => '$statement.object.definition.name',
-//                ),
             ),
         ),
     );
@@ -181,7 +178,7 @@ class EmmaDashboardMongoDb {
         '$group' => array(
           '_id' => '$statement.object.id',
           'name' => array(
-            '$first' => '$statement.object.definition.name', // TODO Check if taking last also is possible
+            '$last' => '$statement.object.definition.name',
           ),
           'count' => array(
             '$sum' => 1,
