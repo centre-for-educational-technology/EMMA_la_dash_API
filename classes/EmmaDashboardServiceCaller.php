@@ -4,6 +4,8 @@ class EmmaDashboardServiceException extends Exception {
 }
 
 class EmmaDashboardServiceCaller {
+  const CACHE_TIMEOUT = 300;
+
   /**
    * Constructs the service caller object.
    * Storage helper is ised as a pointer to an original instance.
@@ -68,7 +70,7 @@ class EmmaDashboardServiceCaller {
       $split = explode('/', $url);
       $cache_file_name = 'course_' . $split[sizeof($split) - 1] . '.json';
       // Try to load from storage
-      $cached_response = $this->storageHelper->readFileIfNotOutdated($id, $cache_file_name, 300);
+      $cached_response = $this->storageHelper->readFileIfNotOutdated($id, $cache_file_name, self::CACHE_TIMEOUT);
       if ( $cached_response ) {
         return $cached_response;
       }

@@ -1,14 +1,22 @@
 <?php
 
 /**
- * There are some issues with this implementation.
- * it creates a catalog for each course.
- * Could run into issues in future.
+ * The storage catalog structure is quite simple and create a subcatalog for
+ * each new course. This could potentially lead to issues if some limits of the
+ * file system are exceeded.
  */
 
-// XXX Need to make sure that directory is writable (either throw an error or
-// add that to the installation steps)
+/**
+ * Exception class to indicate storage exceptions
+ */
+ class EmmaDashboardStorageException extends Exception {
+ }
 
+/**
+ * Storage helper class.
+ * Deals with temporaty storages and validation of information still being fresh
+ * enough (checks for last modification time and provided timeout value).
+ */
 class EmmaDashboardStorage {
   public function __construct() {
     $this->storage = EDB_STORAGE_PATH;
@@ -22,7 +30,10 @@ class EmmaDashboardStorage {
    */
   public function buildFileLocation($course_id, $file_name) {
     if ( !file_exists($this->storage . '/' . $course_id) ) {
-      // XXX This could fail silently
+      if ( !is_writable($this->storage) ) {
+        throw new EmmaDashboardStorageException('Storage location is not writable, please contact Administrator');
+      }
+
       mkdir($this->storage . '/' . $course_id);
     }
 
@@ -45,6 +56,9 @@ class EmmaDashboardStorage {
       $modified_time = filemtime($file_location);
 
       if ( $modified_time && ( (time() - $modified_time) <= $timeout_period ) ) {
+        if ( !is_readable($file_location) ) {
+          throw new EmmaDashboardStorageException('Cache file is not readable, please contact Administrator');
+        }
         return file_get_contents($file_location);
       }
     }
@@ -61,7 +75,10 @@ class EmmaDashboardStorage {
   public function createOrUpdateFile($course_id, $file_name, $data) {
     $file_location = $this->buildFileLocation($course_id, $file_name);
 
-    // XXX This could fail silently
+    if ( !is_writable($this->storage) ) {
+      throw new EmmaDashboardStorageException('Storage location is not writable, please contact Administrator');
+    }
+
     $handle = fopen($file_location, 'w');
     fwrite($handle, $data);
     fclose($handle);
