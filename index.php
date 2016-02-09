@@ -1,6 +1,6 @@
 <?php
 
-DEFINE('EDB_APP_VERSION', '1.2.0');
+DEFINE('EDB_APP_VERSION', '1.3.0-alpha');
 
 require_once __DIR__ . '/config.php';
 
