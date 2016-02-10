@@ -159,7 +159,7 @@ class EmmaDashboardMongoDb {
 
 
 
-    return isset($aggregate['result'])? ($aggregate['result']) : 'empty';
+    return isset($aggregate['result'])? ($aggregate['result']) : array();
 
   }
 

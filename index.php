@@ -418,9 +418,6 @@ $klein->respond('/course/[i:id]/student/[:mbox]', function ($request, $response,
       'statement.actor.mbox' => 'mailto:' . $mbox,
   );
 
-
-
-
   $pipeline_assignments = array(
       array(
           '$match' => $query_assignments,
@@ -489,7 +486,109 @@ $klein->respond('/course/[i:id]/student/[:mbox]', function ($request, $response,
   }
 
 
+  // Posts made by student for this course
+  $query_posts = array(
+      'statement.verb.id' => $app->xapiHelpers->getCommentSchemaUri(),
+      'statement.context.contextActivities.grouping.id' => $app->uriBuilder->buildCourseUri($course_id),
+      'statement.actor.mbox' => 'mailto:' . $mbox,
+  );
 
+
+  $pipeline_posts = array(
+      array(
+          '$match' => $query_posts,
+      ),
+      array(
+          '$group' => array(
+              '_id' => 'null',
+              'count' => array(
+                  '$sum' => 1,
+              ),
+          ),
+      ),
+  );
+
+  $posts_made_by_me = $app->learningLockerDb->fetchAggregate($pipeline_posts);
+
+
+  // Average number of posts made by others except this student
+  $query_posts_others = array(
+      'statement.verb.id' => $app->xapiHelpers->getCommentSchemaUri(),
+      'statement.context.contextActivities.grouping.id' => $app->uriBuilder->buildCourseUri($course_id),
+      'statement.actor.mbox' => array(
+          '$in' => $active_students_mailto,
+//          '$nin' => array('mailto:' . $mbox),
+      ),
+  );
+
+
+  $pipeline_posts_others = array(
+      array(
+          '$match' => $query_posts_others,
+      ),
+      array(
+          '$group' => array(
+              '_id' => 'null',
+              'count' => array(
+                  '$sum' => 1,
+              ),
+          ),
+      ),
+  );
+
+  $posts_made_by_others = $app->learningLockerDb->fetchAggregate($pipeline_posts_others);
+
+
+  // Comments made by student for this course
+  $query_comments = array(
+      'statement.verb.id' => $app->xapiHelpers->getRespondedUri(),
+      'statement.context.contextActivities.grouping.id' => $app->uriBuilder->buildCourseUri($course_id),
+      'statement.actor.mbox' => 'mailto:' . $mbox,
+  );
+
+  $pipeline_comments = array(
+      array(
+          '$match' => $query_comments,
+      ),
+      array(
+          '$group' => array(
+              '_id' => 'null',
+              'count' => array(
+                  '$sum' => 1,
+              ),
+          ),
+      ),
+  );
+
+  $comments_made_by_me = $app->learningLockerDb->fetchAggregate($pipeline_comments);
+
+
+  // Comments made by other students for this course
+  $query_comments_others = array(
+      'statement.verb.id' => $app->xapiHelpers->getRespondedUri(),
+      'statement.context.contextActivities.grouping.id' => $app->uriBuilder->buildCourseUri($course_id),
+      'statement.actor.mbox' => array(
+          '$in' => $active_students_mailto,
+//          '$nin' => array('mailto:' . $mbox),
+      ),
+  );
+
+
+  $pipeline_comments_others = array(
+      array(
+          '$match' => $query_comments_others,
+      ),
+      array(
+          '$group' => array(
+              '_id' => 'null',
+              'count' => array(
+                  '$sum' => 1,
+              ),
+          ),
+      ),
+  );
+
+  $comments_made_by_others = $app->learningLockerDb->fetchAggregate($pipeline_comments_others);
 
 
   // Average assignments score of students except this student
@@ -539,7 +638,7 @@ $klein->respond('/course/[i:id]/student/[:mbox]', function ($request, $response,
       'learning_content' => array(
           'materials' => array(
               'lessons_with_units' => $lessons_with_units,
-              'units_visited' => isset($units_visited) ? $units_visited : 0,
+              'units_visited' => $units_visited,
               'assignments_submitted' => isset($aggregate_assignments['result'])? $aggregate_assignments['result'] : 0,
           ),
       ),
@@ -549,6 +648,10 @@ $klein->respond('/course/[i:id]/student/[:mbox]', function ($request, $response,
       'avg_score_by_me' => $avg_score_by_me,
       'avg_units_visited_by_students' => $avg_units_visited_by_students,
       'avg_score_by_students' => $avg_score_by_students,
+      'posts_made_by_me' => (isset($posts_made_by_me['result']) && count($posts_made_by_me['result']) > 0)? $posts_made_by_me['result'][0]['count']: 0,
+      'posts_made_by_others' => (isset($posts_made_by_others['result']) && count($posts_made_by_others['result']) > 0)? $posts_made_by_others['result'][0]['count']: 0,
+      'comments_made_by_me' => (isset($comments_made_by_me['result']) && count($comments_made_by_me['result']) > 0)? $comments_made_by_me['result'][0]['count']: 0,
+      'comments_made_by_others' => (isset($comments_made_by_others['result']) && count($comments_made_by_others['result']) > 0)? $comments_made_by_others['result'][0]['count']: 0,
 
   ));
 });
