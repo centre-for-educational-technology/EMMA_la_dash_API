@@ -315,7 +315,14 @@ $klein->respond('/course/[i:id]/overview', function ($request, $response, $servi
     if ( $aggregate['ok'] == 1 && isset($aggregate['result'][0]) ) {
       $lessons[$lesson->id]['interactions'] = $aggregate['result'][0]['count'];
       // Logic is: Sum of Duration minus Sum of Idle Durations divided by 1000 to get seconds, then bu 60 to get minutes and then by Students count (active ones)
-      $lessons[$lesson->id]['time_spent'] = intval( ( array_sum($aggregate['result'][0]['times']) - array_sum($aggregate['result'][0]['idleTimes']) ) / ( 60 * 1000 * $students_count ) );
+      $average_time =  ( array_sum($aggregate['result'][0]['times']) - array_sum($aggregate['result'][0]['idleTimes']) ) / ( 60 * 1000 * $students_count );
+
+      if ( $average_time > 1) {
+        $average_time = round($average_time, 0, PHP_ROUND_HALF_UP);
+      } else {
+        $average_time = round($average_time, 2, PHP_ROUND_HALF_UP);
+      }
+      $lessons[$lesson->id]['time_spent'] = $average_time ;
     } else {
       $lessons[$lesson->id]['interactions'] = 0;
       $lessons[$lesson->id]['time_spent'] = 0;
