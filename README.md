@@ -35,3 +35,14 @@ Every response should also have a header **edb-app-version** with version inform
 Please do not mistaken that with API versioning, there is only one API and this one refers to the APP version.
 At the moment there is no intention on creating multiple API versions, if that ever happens, then it would use
 a better strategy of prefixing the URI like **v1/course/ID/participants**.
+
+# Upgrade
+
+## 1.2.0 to 1.3.0
+
+No new configurations added, contents are compatible and config files are reusable
+
+* Download new package and extract the contents
+* Reuse config.php and .htaccess files from the previous installation
+* You can either load modules with Composer or just reuse the previous **vendor** catalog (its contents)
+* Make sure the **data** catalog is writable for the user running Apache httpd server
