@@ -3,6 +3,9 @@
 class EmmaDashboardServiceException extends Exception {
 }
 
+class EmmaDashboardServicePermissionException extends Exception {
+}
+
 class EmmaDashboardServiceCaller {
   const CACHE_TIMEOUT = 300;
 
@@ -177,7 +180,7 @@ class EmmaDashboardServiceCaller {
       $teacher_check = json_decode($teacher_check_response);
 
       if ( true !== $teacher_check->status ) {
-        throw new Exception('You are not a teacher of this course.');
+        throw new EmmaDashboardServicePermissionException('You are not a teacher of this course.');
       }
     }
   }
@@ -194,7 +197,7 @@ class EmmaDashboardServiceCaller {
       $student_check = json_decode($student_check_response);
 
       if ( true !== $student_check->status ) {
-        throw new Exception('You are not a student of this course.');
+        throw new EmmaDashboardServicePermissionException('You are not a student of this course.');
       }
     }
   }
@@ -213,7 +216,7 @@ class EmmaDashboardServiceCaller {
       $student_check = json_decode($student_check_response);
 
       if ( true !== $teacher_check->status || true !== $student_check->status ) {
-        throw new Exception('You are not a teacher or student of this course.');
+        throw new EmmaDashboardServicePermissionException('You are not a teacher or student of this course.');
       }
     }
   }
