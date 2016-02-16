@@ -46,3 +46,15 @@ No new configurations added, contents are compatible and config files are reusab
 * Reuse config.php and .htaccess files from the previous installation
 * You can either load modules with Composer or just reuse the previous **vendor** catalog (its contents)
 * Make sure the **data** catalog is writable for the user running Apache httpd server
+
+## 1.3.0 to 1.4.0
+
+Added **EDB_ENABLE_PROTECTION** to config.php file. Default value is **true**.
+That could be disabled in case of development environment or if there is a need
+to test something without logging in as different users.
+
+* Download new package and extract the contents
+* Reuse .htaccess file from the previous installation
+* config.php could also be reused, provided definition for **EDB_ENABLE_PROTECTION** is added from **config.php.example** file
+* You can either load modules with Composer or just reuse the previous **vendor** catalog (its contents)
+* Make sure the **data** catalog is writable for the user running Apache httpd server

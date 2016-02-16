@@ -1,6 +1,6 @@
 <?php
 
-DEFINE('EDB_APP_VERSION', '1.3.0');
+DEFINE('EDB_APP_VERSION', '1.4.0-alpha1');
 
 require_once __DIR__ . '/config.php';
 
@@ -81,12 +81,13 @@ $klein->respond('/version', function($request, $response) {
 $klein->respond('/course/[i:id]/participants', function ($request, $response, $service, $app) {
   $course_id = $request->param('id');
 
+  // Apply permission checks
+  $app->serviceCaller->applyTeacherCheck($course_id);
+
   $course_title = '';
   $dates_and_counts = array();
   $students = array();
 
-  // TODO Data for SINCE and UNTIL is missing
-  // Need to make sure that only sttements from some time span are used
   $query = array(
     'statement.verb.id' => array(
       '$in' => array(
@@ -154,12 +155,12 @@ $klein->respond('/course/[i:id]/participants', function ($request, $response, $s
 $klein->respond('/course/[i:id]/activity_stream', function ($request, $response, $service, $app) {
   $course_id = $request->param('id');
 
+  // Apply permission checks
+  $app->serviceCaller->applyTeacherOrStudentCheck($course_id);
+
   $dates_activities = array();
   $activities_count = 0;
 
-  // TODO Data for SINCE and UNTIL is missing
-  // Need to make sure that only sttements from some time span are used
-  // XXX Need to make sure that query is correct
   $query = array(
     '$or' => array(
       array(
@@ -251,6 +252,9 @@ $klein->respond('/course/[i:id]/activity_stream', function ($request, $response,
 // Course overview endpoint
 $klein->respond('/course/[i:id]/overview', function ($request, $response, $service, $app) {
   $course_id = $request->param('id');
+
+  // Apply permission checks
+  $app->serviceCaller->applyTeacherCheck($course_id);
 
   $structure_response = $app->serviceCaller->getCourseStructure($course_id);
   $structure = json_decode($structure_response);
@@ -358,6 +362,17 @@ $klein->respond('/course/[i:id]/student/[:mbox]', function ($request, $response,
   $mbox = $request->param('mbox');
 
   $course_id = $request->param('id');
+
+  // Apply permission checks
+  $app->serviceCaller->applyStudentCheck($course_id);
+
+  // Replace the MBOX param value with current user email if needed
+  if ( EDB_ENABLE_PROTECTION ) {
+    $current_user_email_response = $app->serviceCaller->getCurrentUserEmail();
+    $current_user_email = json_decode($current_user_email_response);
+
+    $mbox = $current_user_email->email;
+  }
 
   $structure_response = $app->serviceCaller->getCourseStructure($course_id);
   $structure = json_decode($structure_response);
@@ -668,6 +683,9 @@ $klein->respond('/course/[i:id]/student/[:mbox]', function ($request, $response,
 $klein->respond('/course/[i:id]/lessons', function ($request, $response, $service, $app) {
   $course_id = $request->param('id');
 
+  // Apply permission checks
+  $app->serviceCaller->applyTeacherCheck($course_id);
+
   $structure_response = $app->serviceCaller->getCourseStructure($course_id);
   $structure = json_decode($structure_response);
 
@@ -703,6 +721,9 @@ $klein->respond('/course/[i:course]/lesson/[i:lesson]/unit/[i:unit]', function (
   $course_id = $request->param('course');
   $lesson_id = $request->param('lesson');
   $unit_id = $request->param('unit');
+
+  // Apply permission checks
+  $app->serviceCaller->applyTeacherCheck($course_id);
 
   $students_response = $app->serviceCaller->getCourseStudents($course_id);
   $students = json_decode($students_response);
@@ -881,6 +902,9 @@ $klein->respond('/course/[i:id]/sna', function ($request, $response, $service, $
   $file_name = 'course_sna.json';
 
   $course_id = $request->param('id');
+
+  // Apply permission checks
+  $app->serviceCaller->applyTeacherOrStudentCheck($course_id);
 
   // Try to load from storage
   $file_contents = $app->storageHelper->readFileIfNotOutdated($course_id, $file_name);

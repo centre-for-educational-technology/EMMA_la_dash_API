@@ -54,6 +54,32 @@ class EmmaDashboardServiceCaller {
   }
 
   /**
+   * Checks if currently loged in user is a teacher of the course.
+   * @param  integer $id Course identifier
+   * @return string      JSON string with status of true or false
+   */
+  public function getCheckTeacher($id) {
+    return $this->makeCall($id, $this->base . 'api/public/check_teacher/' . $id, false);
+  }
+
+  /**
+   * Checks if currently logged in user is a student of the course.
+   * @param  integer $id Course identifier
+   * @return string     JSON string with status of true of falde
+   */
+  public function getCheckStudent($id) {
+    return $this->makeCall($id, $this->base . 'api/public/check_student/' . $id, false);
+  }
+
+  /**
+   * Returns email of current logged in user or fails
+   * @return string     JSON string with email of the user or error code and message
+   */
+  public function getCurrentUserEmail() {
+    return $this->makeCall($id, $this->base . 'api/public/current_user_email/', false);
+  }
+
+  /**
    * Make a call to service and return the data.
    * There is a possibility to use cache. This will fetch data fom cache if
    * availablt and not yet outdated.
@@ -137,5 +163,58 @@ class EmmaDashboardServiceCaller {
     });
 
     return array_pop($current_unit);
+  }
+
+  /**
+   * Checks if currently logged in user is a teacher of the course.
+   * Throws an Excepton if not teacher.
+   * @param  integer $id Course identifier
+   * @return void
+   */
+  public function applyTeacherCheck($id) {
+    if ( EDB_ENABLE_PROTECTION ) {
+      $teacher_check_response = $this->getCheckTeacher($id);
+      $teacher_check = json_decode($teacher_check_response);
+
+      if ( true !== $teacher_check->status ) {
+        throw new Exception('You are not a teacher of this course.');
+      }
+    }
+  }
+
+  /**
+   * Checks if currently logged in user is a student of the course.
+   * Throws an Exception if not student.
+   * @param  integer $id Course identifier.
+   * @return void
+   */
+  public function applyStudentCheck($id) {
+    if ( EDB_ENABLE_PROTECTION ) {
+      $student_check_response = $this->getCheckStudent($id);
+      $student_check = json_decode($student_check_response);
+
+      if ( true !== $student_check->status ) {
+        throw new Exception('You are not a student of this course.');
+      }
+    }
+  }
+
+  /**
+   * Checks if currently logged in user is a teacher or a student of the course.
+   * @param  integer $id Course identifier.
+   * @return void
+   */
+  public function applyTeacherOrStudentCheck($id) {
+    if ( EDB_ENABLE_PROTECTION ) {
+      $teacher_check_response = $this->getCheckTeacher($id);
+      $teacher_check = json_decode($teacher_check_response);
+
+      $student_check_response = $this->getCheckStudent($id);
+      $student_check = json_decode($student_check_response);
+
+      if ( true !== $teacher_check->status || true !== $student_check->status ) {
+        throw new Exception('You are not a teacher or student of this course.');
+      }
+    }
   }
 }
