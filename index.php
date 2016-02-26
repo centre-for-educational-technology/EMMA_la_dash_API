@@ -24,11 +24,16 @@ if ( EDB_APP_PATH !== '/' ) {
 // Instanciate connections and helpers
 $klein->respond(function ($request, $response, $service, $app) use ($klein) {
   // Error handler
-  $klein->onError(function($klein, $error_msg) {
-    $klein->response()->code(500);
+  $klein->onError(function($klein, $msg, $type, Exception $err) {
+    $code = 500;
+
+    if ( $err instanceof EmmaDashboardServicePermissionException ) {
+      $code = 403;
+    }
+    $klein->response()->code($code);
     // XXX Exposing internal error information might be a bad idea
     $klein->response()->json(array(
-      'message' => $error_msg,
+      'message' => $msg,
     ));
   });
 
