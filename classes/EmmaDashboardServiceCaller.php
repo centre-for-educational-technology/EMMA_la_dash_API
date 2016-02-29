@@ -107,11 +107,17 @@ class EmmaDashboardServiceCaller {
 
     $curl = curl_init();
 
-    curl_setopt_array($curl, array(
+    $curl_options = array(
       CURLOPT_RETURNTRANSFER => 1,
       CURLOPT_URL => $url,
-      CURLOPT_USERPWD => $this->username . ':' . $this->password
-    ));
+      CURLOPT_USERPWD => $this->username . ':' . $this->password,
+    );
+
+    if ( EDB_ENABLE_PROTECTION && isset($_SESSION) && session_id() !== '' ) {
+      $curl_options[CURLOPT_HTTPHEADER] = array('Cookie: ' . session_name() . '=' . session_id());
+    }
+
+    curl_setopt_array($curl, $curl_options);
 
     $result = curl_exec($curl);
 
@@ -215,7 +221,7 @@ class EmmaDashboardServiceCaller {
       $student_check_response = $this->getCheckStudent($id);
       $student_check = json_decode($student_check_response);
 
-      if ( true !== $teacher_check->status || true !== $student_check->status ) {
+      if ( true !== $teacher_check->status && true !== $student_check->status ) {
         throw new EmmaDashboardServicePermissionException('You are not a teacher or student of this course.');
       }
     }
