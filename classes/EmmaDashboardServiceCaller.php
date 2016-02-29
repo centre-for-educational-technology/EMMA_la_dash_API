@@ -113,8 +113,8 @@ class EmmaDashboardServiceCaller {
       CURLOPT_USERPWD => $this->username . ':' . $this->password,
     );
 
-    if ( EDB_ENABLE_PROTECTION && isset($_SESSION) && session_id() !== '' ) {
-      $curl_options[CURLOPT_HTTPHEADER] = array('Cookie: ' . session_name() . '=' . session_id());
+    if ( EDB_ENABLE_PROTECTION && isset($_SESSION) && session_id() !== '') {
+      $curl_options[CURLOPT_COOKIE] = session_name() . '=' . session_id();
     }
 
     curl_setopt_array($curl, $curl_options);
