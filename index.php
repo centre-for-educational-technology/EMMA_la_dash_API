@@ -1,8 +1,13 @@
 <?php
 
-DEFINE('EDB_APP_VERSION', '1.4.0');
+DEFINE('EDB_APP_VERSION', '1.4.1-alpha');
 
 require_once __DIR__ . '/config.php';
+
+//
+if ( EDB_ENABLE_PROTECTION ) {
+  session_start();
+}
 
 require_once __DIR__ . '/vendor/autoload.php';
 require_once __DIR__ . '/classes/EmmaDashboardUriBuilder.php';
@@ -27,7 +32,7 @@ $klein->respond(function ($request, $response, $service, $app) use ($klein) {
   $klein->onError(function($klein, $msg, $type, Exception $err) {
     $code = 500;
 
-    if ( $err instanceof EmmaDashboardServicePermissionException ) {
+    if ( $err instanceof EmmaDashboardServicePermissionException || $err instanceof EmmaDashboardServiceSessionException ) {
       $code = 403;
     }
     $klein->response()->code($code);

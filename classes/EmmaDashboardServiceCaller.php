@@ -6,6 +6,9 @@ class EmmaDashboardServiceException extends Exception {
 class EmmaDashboardServicePermissionException extends Exception {
 }
 
+class EmmaDashboardServiceSessionException extends Exception {
+}
+
 class EmmaDashboardServiceCaller {
   const CACHE_TIMEOUT = 300;
 
@@ -22,6 +25,18 @@ class EmmaDashboardServiceCaller {
     $this->username = $username;
     $this->password = $password;
     $this->storageHelper = $storageHelper;
+  }
+
+  /**
+   * Tries to extract User ID from session.
+   * Throws an exception if missing.
+   * @return integer User ID
+   */
+  private function getLoggedInUserId() {
+    if ( !isset($_SESSION['idUtente']) ) {
+      throw new EmmaDashboardServiceSessionException("Not a logged in user.");
+    }
+    return $_SESSION['idUtente'];
   }
 
   /**
@@ -62,7 +77,8 @@ class EmmaDashboardServiceCaller {
    * @return string      JSON string with status of true or false
    */
   public function getCheckTeacher($id) {
-    return $this->makeCall($id, $this->base . 'api/public/check_teacher/' . $id, false);
+    $userId = $this->getLoggedInUserId();
+    return $this->makeCall($id, $this->base . 'api/public/check_teacher/' . $id . '/' . $userId, false);
   }
 
   /**
@@ -71,7 +87,8 @@ class EmmaDashboardServiceCaller {
    * @return string     JSON string with status of true of falde
    */
   public function getCheckStudent($id) {
-    return $this->makeCall($id, $this->base . 'api/public/check_student/' . $id, false);
+    $userId = $this->getLoggedInUserId();
+    return $this->makeCall($id, $this->base . 'api/public/check_student/' . $id . '/' . $userId, false);
   }
 
   /**
@@ -79,7 +96,8 @@ class EmmaDashboardServiceCaller {
    * @return string     JSON string with email of the user or error code and message
    */
   public function getCurrentUserEmail() {
-    return $this->makeCall($id, $this->base . 'api/public/current_user_email/', false);
+    $userId = $this->getLoggedInUserId();
+    return $this->makeCall($id, $this->base . 'api/public/current_user_email/' . $userId, false);
   }
 
   /**
