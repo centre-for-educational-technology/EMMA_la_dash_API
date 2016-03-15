@@ -1,6 +1,6 @@
 <?php
 
-DEFINE('EDB_APP_VERSION', '1.4.1');
+DEFINE('EDB_APP_VERSION', '1.4.2');
 
 require_once __DIR__ . '/config.php';
 
@@ -930,9 +930,11 @@ $klein->respond('/course/[i:id]/sna', function ($request, $response, $service, $
   $edges = array();
 
   foreach ( $students as $student ) {
+    $tmp_label = explode('@', $student, 2);
+    $tmp_label = $tmp_label[0];
     $nodes['mailto:' . $student] = array(
       'id' => 'mailto:' . $student,
-      'label' => $student,
+      'label' => $tmp_label,
       'size' => '1',
     );
   }
