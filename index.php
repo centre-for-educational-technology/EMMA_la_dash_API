@@ -1,6 +1,6 @@
 <?php
 
-DEFINE('EDB_APP_VERSION', '1.4.2');
+DEFINE('EDB_APP_VERSION', '1.4.3');
 
 require_once __DIR__ . '/config.php';
 
@@ -109,6 +109,10 @@ $klein->respond('/course/[i:id]/participants', function ($request, $response, $s
   );
 
   $cursor = $app->learningLockerDb->fetchData($query);
+
+  $cursor->sort(array(
+    'statement.timestamp' => 1
+  ));
 
   foreach( $cursor as $document ) {
     $timestamp_date = $app->learningLockerDb->formatTimestampDate($document['statement']['timestamp']);
