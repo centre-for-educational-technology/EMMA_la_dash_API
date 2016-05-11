@@ -524,7 +524,7 @@ $klein->respond('/course/[i:id]/student/[:mbox]', function ($request, $response,
 
   // Posts made by student for this course
   $query_posts = array(
-      'statement.verb.id' => $app->xapiHelpers->getCommentSchemaUri(),
+      'statement.verb.id' => $app->xapiHelpers->getCommentedUri(),
       'statement.context.contextActivities.grouping.id' => $app->uriBuilder->buildCourseUri($course_id),
       'statement.actor.mbox' => 'mailto:' . $mbox,
   );
@@ -549,7 +549,7 @@ $klein->respond('/course/[i:id]/student/[:mbox]', function ($request, $response,
 
   // Average number of posts made by others except this student
   $query_posts_others = array(
-      'statement.verb.id' => $app->xapiHelpers->getCommentSchemaUri(),
+      'statement.verb.id' => $app->xapiHelpers->getCommentedUri(),
       'statement.context.contextActivities.grouping.id' => $app->uriBuilder->buildCourseUri($course_id),
       'statement.actor.mbox' => array(
           '$in' => $active_students_mailto,
