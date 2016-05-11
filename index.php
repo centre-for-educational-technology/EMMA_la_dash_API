@@ -1,6 +1,6 @@
 <?php
 
-DEFINE('EDB_APP_VERSION', '1.4.3');
+DEFINE('EDB_APP_VERSION', '1.4.5');
 
 require_once __DIR__ . '/config.php';
 
@@ -479,7 +479,7 @@ $klein->respond('/course/[i:id]/student/[:mbox]', function ($request, $response,
   $avg_score_by_me = 0;
 
   //Round assignment results
-  if(isset($aggregate_assignments['result'])){
+  if(isset($aggregate_assignments['result']) && count($aggregate_assignments['result']) > 0){
     foreach ( $aggregate_assignments['result'] as $key => $single ) {
       $aggregate_assignments['result'][$key]['score_last']=round($aggregate_assignments['result'][$key]['score_last'], 2)*100;
       $aggregate_assignments['result'][$key]['score_avg']=round($aggregate_assignments['result'][$key]['score_avg'], 2)*100;
