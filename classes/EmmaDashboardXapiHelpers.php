@@ -26,6 +26,11 @@ class EmmaDashboardXapiHelpers {
     return 'http://adlnet.gov/expapi/verbs/responded';
   }
 
+
+  public static function getCommentedUri() {
+    return 'http://activitystrea.ms/schema/1.0/comment';
+  }
+
   public static function getLinkTypeUri () {
     return 'http://adlnet.gov/expapi/activities/link';
   }
