@@ -1,6 +1,6 @@
 <?php
 
-DEFINE('EDB_APP_VERSION', '1.4.4');
+DEFINE('EDB_APP_VERSION', '1.4.5');
 
 require_once __DIR__ . '/config.php';
 
@@ -399,31 +399,37 @@ $klein->respond('/course/[i:id]/student/[:mbox]', function ($request, $response,
   $assignments = array();
 
   if ( isset($structure->lessons) ) {
-    foreach( $structure->lessons as $lesson ) {
-      $lessons_with_units[$lesson->id] = array(
-          'id' => $lesson->id,
-          'title' => $lesson->title,
-          'url' => $app->uriBuilder->buildUnitUri($lesson->id),
-          'units' => array(),
-      );
-      if ( isset($lesson->units) ) {
-        foreach ( $lesson->units as $unit ) {
-          $lessons_with_units[$lesson->id]['units'][$unit->id] = array(
-              'id' => $unit->id,
-              'url' => $app->uriBuilder->buildUnitUri($unit->id),
-              'title' => $unit->title,
+    foreach ($structure->lessons as $lesson) {
+      if ($lesson->status == 1){
+          $lessons_with_units[$lesson->id] = array(
+              'id' => $lesson->id,
+              'title' => $lesson->title,
+              'url' => $app->uriBuilder->buildUnitUri($lesson->id),
+              'units' => array(),
           );
-          array_push($units, $app->uriBuilder->buildUnitUri($unit->id));
-          if (isset ($unit->assignments)){
-            foreach ($unit->assignments as $assignment){
-              $lessons_with_units[$lesson->id]['units'][$unit->id]['assignments'][] = array(
-                  'id' => $assignment->id,
-                  'url' => $app->uriBuilder->buildAssignmentUri($assignment->id),
-                  'title' => $assignment->title,
+        if (isset($lesson->units)) {
+          foreach ($lesson->units as $unit) {
+              if ($unit->status == 1){
+              $lessons_with_units[$lesson->id]['units'][$unit->id] = array(
+                  'id' => $unit->id,
+                  'url' => $app->uriBuilder->buildUnitUri($unit->id),
+                  'title' => $unit->title,
               );
-              array_push($assignments, $app->uriBuilder->buildAssignmentUri($assignment->id));
-            }
+              array_push($units, $app->uriBuilder->buildUnitUri($unit->id));
+              if (isset ($unit->assignments)) {
+                foreach ($unit->assignments as $assignment) {
+                  if ($assignment->status == 1){
+                  $lessons_with_units[$lesson->id]['units'][$unit->id]['assignments'][] = array(
+                        'id' => $assignment->id,
+                        'url' => $app->uriBuilder->buildAssignmentUri($assignment->id),
+                        'title' => $assignment->title,
+                    );
+                    array_push($assignments, $app->uriBuilder->buildAssignmentUri($assignment->id));
+                  }
+                }
 
+              }
+            }
           }
         }
       }
