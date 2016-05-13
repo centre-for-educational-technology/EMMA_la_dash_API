@@ -394,6 +394,8 @@ $klein->respond('/course/[i:id]/student/[:mbox]', function ($request, $response,
 
   $lessons_with_units = array();
 
+  $lessons = array();
+
   $units = array();
 
   $assignments = array();
@@ -401,12 +403,13 @@ $klein->respond('/course/[i:id]/student/[:mbox]', function ($request, $response,
   if ( isset($structure->lessons) ) {
     foreach ($structure->lessons as $lesson) {
       if ($lesson->status == 1){
-          $lessons_with_units[$lesson->id] = array(
-              'id' => $lesson->id,
-              'title' => $lesson->title,
-              'url' => $app->uriBuilder->buildUnitUri($lesson->id),
-              'units' => array(),
-          );
+        $lessons_with_units[$lesson->id] = array(
+            'id' => $lesson->id,
+            'title' => $lesson->title,
+            'url' => $app->uriBuilder->buildLessonUri($course_id, $lesson->id),
+            'units' => array(),
+        );
+        array_push($lessons, $app->uriBuilder->buildLessonUri($course_id, $lesson->id));
         if (isset($lesson->units)) {
           foreach ($lesson->units as $unit) {
               if ($unit->status == 1){
@@ -437,6 +440,17 @@ $klein->respond('/course/[i:id]/student/[:mbox]', function ($request, $response,
   }
 
 
+  // Lessons visited by student
+  $query_lessons = array(
+      'statement.verb.id' => $app->xapiHelpers->getVisitedUri(),
+      'statement.object.id' => array(
+          '$in' => $lessons,
+      ),
+      'statement.actor.mbox' => 'mailto:' . $mbox,
+  );
+
+  $lessons_visited = $app->learningLockerDb->getVisitorAccessedMaterial($query_lessons);
+
   // Units visited by student
   $query_units = array(
       'statement.verb.id' => $app->xapiHelpers->getVisitedUri(),
@@ -449,6 +463,17 @@ $klein->respond('/course/[i:id]/student/[:mbox]', function ($request, $response,
   $units_visited = $app->learningLockerDb->getVisitorAccessedMaterial($query_units);
 
 
+
+  // Assignements visited by student
+//  $query_assignemts_visited = array(
+//      'statement.verb.id' => $app->xapiHelpers->getVisitedUri(),
+//      'statement.object.id' => array(
+//          '$in' => $assignments,
+//      ),
+//      'statement.actor.mbox' => 'mailto:' . $mbox,
+//  );
+//
+//  $assignments_visited = $app->learningLockerDb->getVisitorAccessedMaterial($query_assignemts_visited);
 
 
   // Assignments answered by student
@@ -680,7 +705,9 @@ $klein->respond('/course/[i:id]/student/[:mbox]', function ($request, $response,
       'learning_content' => array(
           'materials' => array(
               'lessons_with_units' => $lessons_with_units,
+              'lessons_visited' => $lessons_visited,
               'units_visited' => $units_visited,
+//              'assignments_visited' => $assignments_visited,
               'assignments_submitted' => isset($aggregate_assignments['result'])? $aggregate_assignments['result'] : 0,
           ),
       ),

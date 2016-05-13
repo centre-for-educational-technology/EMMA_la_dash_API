@@ -10,7 +10,7 @@ class EmmaDashboardUriBuilder {
   }
 
   public function buildLessonUri($courseId, $id) {
-    return $this->base . 'lessonlesson.php?cor=' . $courseId . '&lez=' . $id;
+    return $this->base . 'lesson.php?cor=' . $courseId . '&lez=' . $id;
   }
 
   public function buildUnitUri($id) {
