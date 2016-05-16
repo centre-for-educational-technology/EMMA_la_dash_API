@@ -1,6 +1,6 @@
 <?php
 
-DEFINE('EDB_APP_VERSION', '1.4.5');
+DEFINE('EDB_APP_VERSION', '1.4.6');
 
 require_once __DIR__ . '/config.php';
 
@@ -465,15 +465,15 @@ $klein->respond('/course/[i:id]/student/[:mbox]', function ($request, $response,
 
 
   // Assignements visited by student
-//  $query_assignemts_visited = array(
-//      'statement.verb.id' => $app->xapiHelpers->getVisitedUri(),
-//      'statement.object.id' => array(
-//          '$in' => $assignments,
-//      ),
-//      'statement.actor.mbox' => 'mailto:' . $mbox,
-//  );
-//
-//  $assignments_visited = $app->learningLockerDb->getVisitorAccessedMaterial($query_assignemts_visited);
+  $query_assignemts_visited = array(
+      'statement.verb.id' => $app->xapiHelpers->getVisitedUri(),
+      'statement.object.id' => array(
+          '$in' => $assignments,
+      ),
+      'statement.actor.mbox' => 'mailto:' . $mbox,
+  );
+
+  $assignments_visited = $app->learningLockerDb->getVisitorAccessedMaterial($query_assignemts_visited);
 
 
   // Assignments answered by student
@@ -707,7 +707,7 @@ $klein->respond('/course/[i:id]/student/[:mbox]', function ($request, $response,
               'lessons_with_units' => $lessons_with_units,
               'lessons_visited' => $lessons_visited,
               'units_visited' => $units_visited,
-//              'assignments_visited' => $assignments_visited,
+              'assignments_visited' => $assignments_visited,
               'assignments_submitted' => isset($aggregate_assignments['result'])? $aggregate_assignments['result'] : 0,
           ),
       ),
