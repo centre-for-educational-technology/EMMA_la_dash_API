@@ -1,6 +1,6 @@
 <?php
 
-DEFINE('EDB_APP_VERSION', '1.4.5');
+DEFINE('EDB_APP_VERSION', '1.5.0');
 
 require_once __DIR__ . '/config.php';
 
@@ -53,7 +53,7 @@ $klein->respond(function ($request, $response, $service, $app) use ($klein) {
     );
   });
   $app->register('uriBuilder', function () {
-    return new EmmaDashboardUriBuilder(EDB_PLATFORM_URL);
+    return new EmmaDashboardUriBuilder(EDB_BUILDER_URL);
   });
   $app->register('xapiHelpers', function () {
     return new EmmaDashboardXapiHelpers();
@@ -1019,6 +1019,7 @@ $klein->respond('/course/[i:id]/sna', function ($request, $response, $service, $
       '$in' => array(
         $app->xapiHelpers->getRespondedUri(),
         $app->xapiHelpers->getCreateUri(),
+        //$app->xapiHelpers->getCommentedUri(), // XXX See if this fits
       ),
     ),
     'statement.object.definition.type' => $app->xapiHelpers->getCommentSchemaUri(),
