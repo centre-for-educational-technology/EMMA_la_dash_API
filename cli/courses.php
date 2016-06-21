@@ -37,18 +37,22 @@ foreach( $cursor as $document ) {
 
   // Ignore any courses with no identifiers
   if ( $courseId !== $document['statement']['object']['id'] ) {
+    $courseTitle = EmmaDashboardCliHelpers::extractFirstValue( $document['statement']['object']['definition']['name'] );
+
     if ( !array_key_exists( $courseId, $courses ) ) {
       $courses[$courseId] = array(
         'id' => $courseId,
         'url' => $document['statement']['object']['id'],
-        'title' => EmmaDashboardCliHelpers::extractFirstValue( $document['statement']['object']['definition']['name'] ),
+        'title' => array( $courseTitle ),
         'start' => '',
         'end' => '',
         'teacher_name' => $document['statement']['actor']['name'],
         'teacher_email' => EmmaDashboardCliHelpers::mboxIntoEmail( $document['statement']['actor']['mbox'] )
       );
     } else {
-      $courses[$courseId]['title'] = $courses[$courseId]['title'] . ' || ' . EmmaDashboardCliHelpers::extractFirstValue( $document['statement']['object']['definition']['name'] );
+      if ( !in_array( $courseTitle, $courses[ $courseId ]['title'] ) ) {
+        $courses[$courseId]['title'][] = $courseTitle;
+      }
     }
   }
 }
@@ -80,6 +84,7 @@ $fileHandle = fopen( __DIR__ . '/' . $fileName, 'w+' );
 fputcsv( $fileHandle, array( 'id', 'url', 'title', 'start', 'end', 'teacher_name', 'teacher_email' ) );
 
 foreach ( $courses as $course ) {
+  $course['title'] = implode( ' || ', $course['title'] );
   fputcsv( $fileHandle, array_values( $course ) );
 }
 
