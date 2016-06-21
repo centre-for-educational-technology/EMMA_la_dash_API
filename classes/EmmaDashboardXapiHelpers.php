@@ -39,6 +39,10 @@ class EmmaDashboardXapiHelpers {
     return 'http://activitystrea.ms/schema/1.0/comment';
   }
 
+  public static function getCourseSchemaUri() {
+    return 'http://adlnet.gov/expapi/activities/course';
+  }
+
   /**
    * Retruns unknown activity type constant
    * @return string Returned value
