@@ -1018,7 +1018,7 @@ $klein->respond('/course/[i:id]/sna', function ($request, $response, $service, $
       '$in' => array(
         $app->xapiHelpers->getRespondedUri(),
         $app->xapiHelpers->getCreateUri(),
-        //$app->xapiHelpers->getCommentedUri(), // XXX See if this fits
+        $app->xapiHelpers->getCommentedUri(),
       ),
     ),
     'statement.object.definition.type' => $app->xapiHelpers->getCommentSchemaUri(),
@@ -1105,6 +1105,17 @@ $klein->respond('/course/[i:id]/sna', function ($request, $response, $service, $
           }
         }
       }
+  }
+
+  // Hide email addresses by creating hashes
+  foreach ( $nodes as $key => $node ) {
+    $nodes[ $key ]['id'] = sha1( $node['id'] );
+  }
+
+  foreach( $edges as $key => $edge ) {
+    $edges[ $key ]['id'] = sha1( $edge['id'] );
+    $edges[ $key ]['source'] = sha1( $edge['source'] );
+    $edges[ $key ]['target'] = sha1( $edge['target'] );
   }
 
   $response_data = array(
