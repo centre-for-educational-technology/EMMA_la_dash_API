@@ -972,6 +972,7 @@ $klein->respond('/course/[i:id]/sna', function ($request, $response, $service, $
       'id' => 'mailto:' . $student,
       'label' => $tmp_label,
       'size' => '1',
+      'hasConnections' => '0',
     );
   }
 
@@ -1093,6 +1094,8 @@ $klein->respond('/course/[i:id]/sna', function ($request, $response, $service, $
           }
 
           $nodes[$owner]['size'] += 1;
+          $nodes[$owner]['hasConnections'] = '1';
+          $nodes[$commenter]['hasConnections'] = '1';
           if ( isset($edges[$owner . ':' . $commenter]) ) {
             $edges[$owner . ':' . $commenter]['size'] += 1;
           } else {
@@ -1110,6 +1113,12 @@ $klein->respond('/course/[i:id]/sna', function ($request, $response, $service, $
   // Hide email addresses by creating hashes
   foreach ( $nodes as $key => $node ) {
     $nodes[ $key ]['id'] = sha1( $node['id'] );
+    // XXX This could be applied to courses with large number of participants
+    // Example: > 500 OR > 250
+    if ( $node['hasConnections'] === '0' ) {
+      unset( $nodes[ $key ] );
+    }
+    unset( $nodes[ $key ]['hasConnections'] );
   }
 
   foreach( $edges as $key => $edge ) {
