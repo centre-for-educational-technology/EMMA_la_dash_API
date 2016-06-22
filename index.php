@@ -133,7 +133,6 @@ $klein->respond('/course/[i:id]/participants', function ($request, $response, $s
       $students[$email] = array(
         'firstName' => $nameSplit[0],
         'lastName' => count($nameSplit) > 1 ? $nameSplit[1] : '',
-        'email' => $email,
         'join' => 0,
         'leave' => 0
       );
