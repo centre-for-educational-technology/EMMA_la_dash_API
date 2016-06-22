@@ -14,4 +14,16 @@ class EmmaDashboardCliHelpers {
   public static function mboxIntoEmail( $mbox ) {
     return preg_replace( '/^' . preg_quote('mailto:', '/') . '/', '', $mbox );
   }
+
+  public static function roundMinutes( $time ) {
+    if ( $time > 1) {
+      return round($time, 0, PHP_ROUND_HALF_UP);
+    } else {
+      return round($time, 2, PHP_ROUND_HALF_UP);
+    }
+  }
+
+  public static function milliSecondsToMinutes( $time ) {
+    return $time / ( 60 * 1000 );
+  }
 }
