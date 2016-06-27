@@ -5,7 +5,17 @@ if ( !( php_sapi_name() === 'cli' ) ) {
 }
 
 // Fill with suitable course identifiers
+// OR
+// Pass comma separated list as an argument to the script
 $courseIds = array();
+
+if ( count( $argv ) > 1 ) {
+  $courseIds = explode( ',', $argv[1] );
+} else {
+  if ( count( $courseIds ) === 0 ) {
+    echo '!!!WARNING!!! Course identifiers should be provided as a comma separated list within an argument!' . PHP_EOL;
+  }
+}
 
 if ( !( isset( $courseIds ) && is_array( $courseIds ) && count( $courseIds) >= 1 ) ) {
   exit( '!!!ERROR!!! No course identifiers present!' . PHP_EOL );
