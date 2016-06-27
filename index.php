@@ -2,6 +2,8 @@
 
 DEFINE('EDB_APP_VERSION', '1.6.0');
 
+DEFINE('EDB_MAX_NODES_THRESHOLD', 500);
+
 require_once __DIR__ . '/config.php';
 
 //
@@ -972,7 +974,7 @@ $klein->respond('/course/[i:id]/sna', function ($request, $response, $service, $
       'id' => 'mailto:' . $student,
       'label' => $tmp_label,
       'size' => '1',
-      'hasConnections' => '0',
+      'hasConnections' => false,
     );
   }
 
@@ -1094,8 +1096,8 @@ $klein->respond('/course/[i:id]/sna', function ($request, $response, $service, $
           }
 
           $nodes[$owner]['size'] += 1;
-          $nodes[$owner]['hasConnections'] = '1';
-          $nodes[$commenter]['hasConnections'] = '1';
+          $nodes[$owner]['hasConnections'] = true;
+          $nodes[$commenter]['hasConnections'] = true;
           if ( isset($edges[$owner . ':' . $commenter]) ) {
             $edges[$owner . ':' . $commenter]['size'] += 1;
           } else {
@@ -1110,13 +1112,15 @@ $klein->respond('/course/[i:id]/sna', function ($request, $response, $service, $
       }
   }
 
-  // Hide email addresses by creating hashes
+  $nodesCount = count( $nodes );
+
   foreach ( $nodes as $key => $node ) {
+    // Hide email address by creating a hash
     $nodes[ $key ]['id'] = sha1( $node['id'] );
-    // XXX This could be applied to courses with large number of participants
-    // Example: > 500 OR > 250
-    if ( $node['hasConnections'] === '0' ) {
-      unset( $nodes[ $key ] );
+    if ( $nodesCount > EDB_MAX_NODES_THRESHOLD ) {
+      if ( $node['hasConnections'] === false ) {
+        unset( $nodes[ $key ] );
+      }
     }
     unset( $nodes[ $key ]['hasConnections'] );
   }
