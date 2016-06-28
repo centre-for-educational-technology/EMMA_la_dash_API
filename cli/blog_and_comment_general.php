@@ -81,7 +81,12 @@ foreach ( $weeks as $index => $week ) {
 
   $respondedCommentQuery = array(
     'statement.verb.id' => $xapiHelpers::getRespondedUri(),
-    'statement.object.definition.type' => $xapiHelpers::getCommentActivityUri(),
+    'statement.object.definition.type' => array(
+      '$in' => array(
+        $xapiHelpers::getCommentActivityUri(),
+        $xapiHelpers::getCommentSchemaUri(),
+      ),
+    ),
     'statement.timestamp' => array(
       '$gte' => date(DATE_ATOM, $week['since']),
       '$lte' => date(DATE_ATOM, $week['until']),
@@ -96,6 +101,7 @@ foreach ( $weeks as $index => $week ) {
       '$nin' => array(
         $xapiHelpers::getBlogActivityUri(),
         $xapiHelpers::getCommentActivityUri(),
+        $xapiHelpers::getCommentSchemaUri(),
       ),
     ),
     'statement.timestamp' => array(
