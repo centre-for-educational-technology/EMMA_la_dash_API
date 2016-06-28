@@ -32,7 +32,7 @@ fputcsv( $fileHandle, array( 'id', 'mbox', 'units_visited', 'units_total', 'assi
 $start_time = time();
 
 
-$courses = array(115,143,142,118,144,128,146,140,138,156,148);
+$courses = array(115,143,142,118,144,128,146,140,138,156,148,124,149,153,114,165,139,90,161,80);
 
 
 
@@ -51,6 +51,8 @@ foreach ($courses as $course_id){
     //Get students for that course
     $students_response = $serviceCaller->getCourseStudents($course_id);
     $students = json_decode($students_response);
+
+    $students = array_unique($students);
 
 
     //Get course structure
@@ -178,9 +180,12 @@ foreach ($courses as $course_id){
         $all_units_visited = 'True';
       }
 
-      if(($assignments_visited * 100 / $assignments_total) > 50){
-        $success_in_assignments = 'True';
+      if($assignments_total>0){
+        if(($assignments_visited * 100 / $assignments_total) > 50){
+          $success_in_assignments = 'True';
+        }
       }
+
 
 
       fputcsv( $fileHandle, array($course_id, $mbox, $units_visited, $units_total, $assignments_visited, $assignments_total, $all_units_visited, $success_in_assignments) );
