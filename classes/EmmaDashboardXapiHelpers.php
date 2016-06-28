@@ -43,6 +43,14 @@ class EmmaDashboardXapiHelpers {
     return 'http://adlnet.gov/expapi/activities/course';
   }
 
+  public static function getBlogActivityUri() {
+    return 'http://adlnet.gov/expapi/activities/blog';
+  }
+
+  public static function getCommentActivityUri() {
+    return 'http://adlnet.gov/expapi/activities/comment';
+  }
+
   /**
    * Retruns unknown activity type constant
    * @return string Returned value
