@@ -5,7 +5,7 @@ A backend API used by Emma Dashboard.
 # Requirements
 
 * PHP version 5.3.x or later
-* JSON extension
+* JSON and MB_STRING extensions
 * Mongo Client (latest version; tested with 1.6.11)
 * Apache with mod_rewrite
 

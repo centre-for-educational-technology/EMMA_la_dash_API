@@ -17,6 +17,7 @@ require_once __DIR__ . '/classes/EmmaDashboardXapiHelpers.php';
 require_once __DIR__ . '/classes/EmmaDashboardMongoDb.php';
 require_once __DIR__ . '/classes/EmmaDashboardServiceCaller.php';
 require_once __DIR__ . '/classes/EmmaDashboardStorage.php';
+require_once __DIR__ . '/classes/EmmaDashboardHelpers.php';
 
 
 $klein = new \Klein\Klein();
@@ -168,10 +169,18 @@ $klein->respond('/course/[i:id]/participants', function ($request, $response, $s
 
 // Course activity stream endpoint
 $klein->respond('/course/[i:id]/activity_stream', function ($request, $response, $service, $app) {
+  $shorten_name = false;
   $course_id = $request->param('id');
 
   // Apply permission checks
   $app->serviceCaller->applyTeacherOrStudentCheck($course_id);
+
+  // Enable name shortening for non-teacher
+  if ( EDB_ENABLE_PROTECTION ) {
+    if ( !$app->serviceCaller->isTeacher($course_id) ) {
+      $shorten_name = true;
+    }
+  }
 
   $dates_activities = array();
   $activities_count = 0;
@@ -251,6 +260,10 @@ $klein->respond('/course/[i:id]/activity_stream', function ($request, $response,
       // This should not be possible, but will be kept just in case
       //error_log('Unknown activity type, should not be present.');
       //error_log(print_r($document, true));
+    }
+
+    if ( $shorten_name ) {
+      $single_activity['name'] = EmmaDashboardHelpers::shortenName( $single_activity['name'] );
     }
 
     $dates_activities[$timestamp_date]['activities'][] = $single_activity;
@@ -947,12 +960,21 @@ $klein->respond('/course/[i:course]/lesson/[i:lesson]/unit/[i:unit]', function (
 
 // Course lessons endpoint
 $klein->respond('/course/[i:id]/sna', function ($request, $response, $service, $app) {
+  $shorten_name = false;
   $file_name = 'course_sna.json';
 
   $course_id = $request->param('id');
 
   // Apply permission checks
   $app->serviceCaller->applyTeacherOrStudentCheck($course_id);
+
+  // Enable name shortening for non-teacher
+  if ( EDB_ENABLE_PROTECTION ) {
+    if ( !$app->serviceCaller->isTeacher($course_id) ) {
+      $shorten_name = true;
+      $file_name = 'course_sna_shortname.json';
+    }
+  }
 
   // Try to load from storage
   $file_contents = $app->storageHelper->readFileIfNotOutdated($course_id, $file_name);
@@ -1007,6 +1029,9 @@ $klein->respond('/course/[i:id]/sna', function ($request, $response, $service, $
     foreach ($names_aggregate['result'][0]['actors'] as $actor) {
       if ( array_key_exists($actor['mbox'], $nodes) ) {
         $nodes[ $actor['mbox'] ]['label'] = $actor['name'];
+        if ( $shorten_name ) {
+          $nodes[ $actor['mbox'] ]['label'] = EmmaDashboardHelpers::shortenName($actor['name']);
+        }
       }
     }
   }

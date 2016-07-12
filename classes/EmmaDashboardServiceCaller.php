@@ -190,6 +190,23 @@ class EmmaDashboardServiceCaller {
 
   /**
    * Checks if currently logged in user is a teacher of the course.
+   * Retruns true or false.
+   * @param  integer $id Course identifier
+   * @return void
+   */
+  public function isTeacher($id) {
+    if ( EDB_ENABLE_PROTECTION ) {
+      $teacher_check_response = $this->getCheckTeacher($id);
+      $teacher_check = json_decode($teacher_check_response);
+
+      return $teacher_check->status;
+    }
+
+    return true;
+  }
+
+  /**
+   * Checks if currently logged in user is a teacher of the course.
    * Throws an Excepton if not teacher.
    * @param  integer $id Course identifier
    * @return void
