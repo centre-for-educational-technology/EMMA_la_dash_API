@@ -1,6 +1,6 @@
 <?php
 
-DEFINE('EDB_APP_VERSION', '1.8.0');
+DEFINE('EDB_APP_VERSION', '1.8.1');
 
 DEFINE('EDB_MAX_NODES_THRESHOLD', 500);
 
@@ -173,7 +173,7 @@ $klein->respond('/course/[i:id]/activity_stream', function ($request, $response,
   $course_id = $request->param('id');
 
   // Apply permission checks
-  $app->serviceCaller->applyTeacherOrStudentCheck($course_id);
+  $app->serviceCaller->applyTeacherCheck($course_id);
 
   // Enable name shortening for non-teacher
   if ( EDB_ENABLE_PROTECTION ) {
@@ -745,7 +745,7 @@ $klein->respond('/course/[i:id]/lessons', function ($request, $response, $servic
   $course_id = $request->param('id');
 
   // Apply permission checks
-  $app->serviceCaller->applyTeacherCheck($course_id);
+  $permission_check = $app->serviceCaller->applyTeacherOrStudentCheck($course_id);
 
   $structure_response = $app->serviceCaller->getCourseStructure($course_id);
   $structure = json_decode($structure_response);
@@ -753,18 +753,40 @@ $klein->respond('/course/[i:id]/lessons', function ($request, $response, $servic
   $lessons_with_units = array();
 
   if ( isset($structure->lessons) ) {
-    foreach( $structure->lessons as $lesson ) {
-      $lessons_with_units[$lesson->id] = array(
-        'id' => $lesson->id,
-        'title' => $lesson->title,
-        'units' => array(),
-      );
-      if ( isset($lesson->units) ) {
-        foreach ( $lesson->units as $unit ) {
-          $lessons_with_units[$lesson->id]['units'][] = array(
-            'id' => $unit->id,
-            'title' => $unit->title,
+    if ($permission_check['teacher'] == true) {
+      foreach ($structure->lessons as $lesson) {
+        $lessons_with_units[$lesson->id] = array(
+            'id' => $lesson->id,
+            'title' => $lesson->title,
+            'units' => array(),
+        );
+        if (isset($lesson->units)) {
+          foreach ($lesson->units as $unit) {
+            $lessons_with_units[$lesson->id]['units'][] = array(
+                'id' => $unit->id,
+                'title' => $unit->title,
+            );
+          }
+        }
+      }
+    } elseif ($permission_check['student'] == true) {
+      foreach ($structure->lessons as $lesson) {
+        if ($lesson->status == 1) {
+          $lessons_with_units[$lesson->id] = array(
+              'id' => $lesson->id,
+              'title' => $lesson->title,
+              'units' => array(),
           );
+          if (isset($lesson->units)) {
+            foreach ($lesson->units as $unit) {
+              if ($unit->status == 1) {
+                $lessons_with_units[$lesson->id]['units'][] = array(
+                    'id' => $unit->id,
+                    'title' => $unit->title,
+                );
+              }
+            }
+          }
         }
       }
     }
@@ -784,7 +806,7 @@ $klein->respond('/course/[i:course]/lesson/[i:lesson]/unit/[i:unit]', function (
   $unit_id = $request->param('unit');
 
   // Apply permission checks
-  $app->serviceCaller->applyTeacherCheck($course_id);
+  $app->serviceCaller->applyTeacherOrStudentCheck($course_id);
 
   $students_response = $app->serviceCaller->getCourseStudents($course_id);
   $students = json_decode($students_response);

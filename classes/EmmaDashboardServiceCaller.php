@@ -209,7 +209,7 @@ class EmmaDashboardServiceCaller {
    * Checks if currently logged in user is a teacher of the course.
    * Throws an Excepton if not teacher.
    * @param  integer $id Course identifier
-   * @return void
+   * @return boolean
    */
   public function applyTeacherCheck($id) {
     if ( EDB_ENABLE_PROTECTION ) {
@@ -219,14 +219,16 @@ class EmmaDashboardServiceCaller {
       if ( true !== $teacher_check->status ) {
         throw new EmmaDashboardServicePermissionException('You are not a teacher of this course.');
       }
+      return $teacher_check->status;
     }
+    return true;
   }
 
   /**
    * Checks if currently logged in user is a student of the course.
    * Throws an Exception if not student.
    * @param  integer $id Course identifier.
-   * @return void
+   * @return boolean
    */
   public function applyStudentCheck($id) {
     if ( EDB_ENABLE_PROTECTION ) {
@@ -236,13 +238,15 @@ class EmmaDashboardServiceCaller {
       if ( true !== $student_check->status ) {
         throw new EmmaDashboardServicePermissionException('You are not a student of this course.');
       }
+      return $student_check->status;
     }
+    return true;
   }
 
   /**
    * Checks if currently logged in user is a teacher or a student of the course.
    * @param  integer $id Course identifier.
-   * @return void
+   * @return array
    */
   public function applyTeacherOrStudentCheck($id) {
     if ( EDB_ENABLE_PROTECTION ) {
@@ -255,6 +259,14 @@ class EmmaDashboardServiceCaller {
       if ( true !== $teacher_check->status && true !== $student_check->status ) {
         throw new EmmaDashboardServicePermissionException('You are not a teacher or student of this course.');
       }
+      return array(
+          'teacher' => $teacher_check->status,
+          'student' => $student_check->status,
+      );
     }
+    return array(
+        'teacher' => true,
+        'student' => true,
+    );
   }
 }
